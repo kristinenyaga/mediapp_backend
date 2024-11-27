@@ -1,0 +1,27 @@
+# Node modules
+node_modules/
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# IDE and editor folders
+.vscode/
+.idea/
+
+# Build directories
+/build
+/dist
+
+# Test coverage reports
+/coverage
+
+# Yarn or npm caches
+.npm/
+.yarn/
