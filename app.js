@@ -3,7 +3,7 @@ import cors from 'cors'
 import morgan from 'morgan'
 import dotenv from 'dotenv'
 import patientRoutes from './routes/patient.js'
-
+import appointmentRoutes from './routes/appointment.js'
 dotenv.config();
 
 const app = express();
@@ -15,7 +15,8 @@ app.use(morgan('tiny'));
 app.disable('x-powered-by') 
 
 // routes
-app.use('/api/patient',patientRoutes)
+app.use('/api/patient', patientRoutes)
+app.use('/api/appointment',appointmentRoutes)
 
 
 
