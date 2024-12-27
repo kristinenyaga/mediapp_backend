@@ -25,3 +25,10 @@ Thumbs.db
 # Yarn or npm caches
 .npm/
 .yarn/
+
+# Ignore Sequelize config files
+config/config.json
+
+# Ignore all seeders and migrations if they contain sensitive data
+seeders/*
+migrations/*

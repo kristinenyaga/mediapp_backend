@@ -34,6 +34,9 @@ const Appointment = sequelize.define('Appointment', {
   status: {
     type: DataTypes.STRING,
     defaultValue: 'pending', 
+    validate: {
+      isIn: [['pending', 'completed', 'cancelled']],
+    },
   },
 }, {
   timestamps: true 

@@ -35,6 +35,18 @@ const Doctor = sequelize.define('Doctor', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  working_hours_start: {
+    type: DataTypes.TIME,
+    allowNull: false,
+  },
+  working_hours_end: {
+    type: DataTypes.TIME,
+    allowNull: false,
+  },
+  status: {
+    type: DataTypes.STRING,
+    defaultValue: 'active', // Can be 'active', 'on leave'
+  },
 
 });
 
