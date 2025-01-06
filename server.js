@@ -3,8 +3,8 @@ import { connectDB } from './config/db.js';
 import { sequelize } from './config/db.js';
 import defineAssociations from './config/associations.js';
 defineAssociations()
-const PORT = 5000;
 
+const PORT = 5000;
 connectDB();  
 sequelize.sync() 
   .then(() => {

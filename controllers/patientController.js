@@ -52,31 +52,38 @@ export const login = async (req, res) => {
 
     // Send OTP to email
     console.log('otp', otp)
-const mailOptions = {
-  from: process.env.EMAIL,
-  to: patient.email,
-  subject: 'Your One-Time Password for Login',
-  text: `Hello ${patient.name},\n\nYour one-time password (OTP) is: ${otp}\nPlease use this OTP to log in.`,
-  html: `
+    const mailOptions = {
+      from: process.env.EMAIL,
+      to: patient.email,
+      subject: 'Your One-Time Password for Login',
+      text: `Hello ${patient.username},\n\nYour one-time password (OTP) is: ${otp}\nPlease use this OTP to log in.`,
+      html: `
     <html>
       <body>
-        <h2>Hello ${patient.name},</h2>
+        <h2>Hello ${patient.username},</h2>
         <p>Your one-time password (OTP) is:</p>
         <h3 style="font-size:'20px';font-weight:'medium'">${otp}</h3>
         <p>Please use this OTP to log in.</p>
       </body>
     </html>
   `,
-};
+    };
 
     await transporter.sendMail(mailOptions);
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: false,
+      maxAge: 3600000, 
+      sameSite: 'strict', 
+      
+    })
     res.status(200).json({
       message: 'Login successful',
       token,
-      patient: { id: patient.id, name: patient.name, email: patient.email },
+      patient: { id: patient.id, username: patient.username, email: patient.email },
     });
   } catch (error) {
-    console.error('Login error:', error); // Log for debugging
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Error during login', error });
   }
 };
@@ -93,7 +100,7 @@ export async function verifyOTP(req, res) {
 
 // Signup
 export const signUp = async (req, res) => {
-  const { name, email, password, phone } = req.body;
+  const { username, email, password, phone } = req.body;
 
   try {
     // Check if the email is already in use
@@ -107,7 +114,7 @@ export const signUp = async (req, res) => {
 
     // Create a new patient record
     const newPatient = await Patient.create({
-      name,
+      username,
       email,
       password: hashedPassword,
       phone,
@@ -123,7 +130,7 @@ export const signUp = async (req, res) => {
 // update patient
 export const updatePatient = async (req, res) => {
   const { id } = req.params;
-  const { name, email, phone } = req.body;
+  const { username, email, phone } = req.body;
 
   try {
     // Find the patient by ID
@@ -135,7 +142,7 @@ export const updatePatient = async (req, res) => {
     }
 
     // Update patient details
-    patient.name = name || patient.name;
+    patient.username = username || patient.username;
     patient.email = email || patient.email;
     patient.phone = phone || patient.phone;
 
