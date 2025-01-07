@@ -23,63 +23,57 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Validate inputs
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Check if the patient exists
     const patient = await Patient.findOne({ where: { email } });
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
 
-    // Compare the provided password with the hashed password
     const isMatch = await bcrypt.compare(password.toString(), patient.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Generate a JWT
-    const token = jwt.sign({ id: patient.id, email: patient.email }, JWT_SECRET, {
-      expiresIn: '1h', // Token expires in 1 hour
+    const accessToken = jwt.sign({ id: patient.id, email: patient.email }, JWT_SECRET, { expiresIn: '1h' });
+
+    const refreshToken = jwt.sign({ id: patient.id, email: patient.email }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production', 
+      sameSite: 'None', 
+      path: '/',
     });
 
-    // Generate OTP 
+    // Clear old OTP and generate new one
+    req.app.locals.OTP = null;
     const otp = otpGenerator.generate(6, { digits: true, upperCaseAlphabets: false, specialChars: false });
-    req.app.locals.OTP = otp;  
-    req.app.locals.resetSession = false; 
+    req.app.locals.OTP = { value: otp, expiresAt: Date.now() + 5 * 60 * 1000, attempts: 0 };
 
-    // Send OTP to email
-    console.log('otp', otp)
-    const mailOptions = {
+    console.log('Generated OTP:', otp);
+    await transporter.sendMail({
       from: process.env.EMAIL,
       to: patient.email,
       subject: 'Your One-Time Password for Login',
-      text: `Hello ${patient.username},\n\nYour one-time password (OTP) is: ${otp}\nPlease use this OTP to log in.`,
       html: `
-    <html>
-      <body>
-        <h2>Hello ${patient.username},</h2>
-        <p>Your one-time password (OTP) is:</p>
-        <h3 style="font-size:'20px';font-weight:'medium'">${otp}</h3>
-        <p>Please use this OTP to log in.</p>
-      </body>
-    </html>
-  `,
-    };
+        <html>
+          <body>
+            <h2>Hello ${patient.username},</h2>
+            <p>Your one-time password (OTP) is:</p>
+            <h3>${otp}</h3>
+            <p>Please use this OTP to log in. It will expire in 5 minutes.</p>
+          </body>
+        </html>
+      `,
+    });
 
-    await transporter.sendMail(mailOptions);
-    res.cookie('authToken', token, {
-      httpOnly: true,
-      secure: false,
-      maxAge: 3600000, 
-      sameSite: 'strict', 
-      
-    })
+
     res.status(200).json({
-      message: 'Login successful',
-      token,
+      message: 'Login successful. OTP sent to email.',
+      accessToken,
       patient: { id: patient.id, username: patient.username, email: patient.email },
     });
   } catch (error) {
@@ -87,16 +81,91 @@ export const login = async (req, res) => {
     res.status(500).json({ message: 'Error during login', error });
   }
 };
+
 export async function verifyOTP(req, res) {
-  const { code } = req.query
-  console.log(code,req.app.locals.OTP)
-  if (parseInt(code) === parseInt(req.app.locals.OTP)) {
-    req.app.locals.OTP = null 
-    req.app.locals.resetSession = false 
-    return res.status(201).send({ msg: "OTP Verified Successsfully!" });
+  try {
+    const { code } = req.body;
+    const OTP = req.app.locals.OTP;
+
+    if (!OTP || Date.now() > OTP.expiresAt) {
+      req.app.locals.OTP = null;
+      return res.status(400).send({ error: "OTP has expired. Please request a new one." });
+    }
+
+    // Compare OTP as strings
+    if (code === OTP.value) {
+      req.app.locals.OTP = null;
+      req.app.locals.resetSession = false;
+      return res.status(200).send({ msg: "OTP Verified Successfully!" });
+    }
+
+    OTP.attempts += 1;
+    if (OTP.attempts > 3) {
+      req.app.locals.OTP = null;
+      return res.status(400).send({ error: "Too many failed attempts. Please request a new OTP." });
+    }
+
+    return res.status(400).send({ error: "Invalid OTP" });
+  } catch (error) {
+    console.error("Error during OTP verification:", error);
+    return res.status(500).send({ error: "Server error during OTP verification" });
   }
-  return res.status(400).send({ error: "Invalid OTP" });
 }
+
+export const resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email not found in token' });
+    }
+
+    // Find the patient
+    const patient = await Patient.findOne({ where: { email } });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // // Check rate limiting: Ensure the previous OTP is not resent too soon
+    // const OTP = req.app.locals.OTP;
+    // if (OTP && OTP.expiresAt > Date.now()) {
+    //   const remainingTime = Math.ceil((OTP.expiresAt - Date.now()) / 1000);
+    //   return res.status(429).json({
+    //     message: `Please wait ${remainingTime} seconds before requesting a new OTP.`,
+    //   });
+    // }
+
+    // Generate a new OTP
+    req.app.locals.OTP = null;
+    const otp = otpGenerator.generate(6, { digits: true, upperCaseAlphabets: false, specialChars: false });
+    req.app.locals.OTP = { value: otp, expiresAt: Date.now() + 5 * 60 * 1000, attempts: 0 }; // 5 minutes expiry
+
+    // Send OTP via email
+    console.log('Resent OTP:', otp);
+    await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: patient.email,
+      subject: "Your Resent OTP for Login",
+      html: `
+        <html>
+          <body>
+            <h2>Hello ${patient.username},</h2>
+            <p>Your new one-time password (OTP) is:</p>
+            <h3>${otp}</h3>
+            <p>Please use this OTP to log in. It will expire in 5 minutes.</p>
+          </body>
+        </html>
+      `,
+    });
+
+    return res.status(200).json({ message: "OTP resent successfully!" });
+  } catch (error) {
+    console.error("Error during OTP resend:", error);
+    return res.status(500).json({ message: "Server error during OTP resend", error });
+  }
+};
+
+
 
 // Signup
 export const signUp = async (req, res) => {
