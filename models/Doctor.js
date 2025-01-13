@@ -23,25 +23,21 @@ const Doctor = sequelize.define('Doctor', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  phone: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   specialization: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
-  availability: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true,
+  yearsOfExperience: {
+    type: DataTypes.STRING,
+    allowNull: true,
   },
   room_number: {
     type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  working_hours_start: {
-    type: DataTypes.TIME,
-    allowNull: false,
-  },
-  working_hours_end: {
-    type: DataTypes.TIME,
-    allowNull: false,
+    allowNull: true,
   },
   status: {
     type: DataTypes.STRING,
