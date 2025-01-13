@@ -5,7 +5,8 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import patientRoutes from './routes/patient.js';
 import appointmentRoutes from './routes/appointment.js';
-
+import doctorRoutes from './routes/doctor.js'
+import workingHoursRoutes from './routes/workingHours.js'
 dotenv.config();
 
 const app = express();
@@ -24,6 +25,8 @@ app.use(cookieParser());
 // Routes
 app.use('/api/patient', patientRoutes);
 app.use('/api/appointment', appointmentRoutes);
+app.use('/api/doctor/',doctorRoutes)
+app.use('/api/workingHours', workingHoursRoutes)
 
 app.get('/test-cookies', (req, res) => {
   console.log(req.cookies); // Should display cookies in the console
