@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import otpGenerator from "otp-generator";
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
+import EmergencyContact from '../models/EmergencyContact.js';
+import MedicalInformation from '../models/MedicalInformation.js';
 dotenv.config()
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
@@ -199,25 +201,72 @@ export const signUp = async (req, res) => {
 // update patient
 export const updatePatient = async (req, res) => {
   const { id } = req.params;
-  const { username, email, phone } = req.body;
 
   try {
     // Find the patient by ID
-    const patient = await Patient.findByPk(id);
+    const patient = await Patient.findByPk(id, {
+      include: [
+        {
+        model: EmergencyContact,
+        as:'emergencycontact'
+        },
+        {
+          model: MedicalInformation,
+          as:'medicalinformation'
+
+        }
+      ]
+    });
 
     // Check if the patient exists
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' });
     }
 
-    // Update patient details
-    patient.username = username || patient.username;
-    patient.email = email || patient.email;
-    patient.phone = phone || patient.phone;
+    await patient.update(req.body.patient)
 
-    await patient.save(); // Save changes to the database
+    if (req.body.emergencyContact) {
+      const existingEmergencyContact = await EmergencyContact.findOne({ where: { patientId: id } });
+      
+      if (existingEmergencyContact) {
+        await existingEmergencyContact.update(req.body.emergencyContact);
+      } else {
+        await EmergencyContact.create({
+          patientId: id,
+          ...req.body.emergencyContact,
+        });
+      }
+    }
+    if (req.body.medicalInformation) {
+      const existingmedicalInformation = await MedicalInformation.findOne({ where: { patientId: id } })
+      if (existingmedicalInformation) {
+        await MedicalInformation.update(req.body.medicalInformation,)
+      }
+      else {
+        await MedicalInformation.create({
+          patientId: id,
+          ...req.body.emergencyContact
+        })
+      }
 
-    res.status(200).json({ message: 'Patient updated successfully', patient });
+    }
+    const updatedPatient = await Patient.findByPk(id, {
+      include: [
+        {
+          model: EmergencyContact,
+          as: 'emergencycontact'
+        },
+        {
+          model: MedicalInformation,
+          as: 'medicalinformation'
+        }
+      ]
+    });
+
+    res.status(200).json({
+      message: 'Patient updated successfully',
+      patient: updatedPatient
+    });
   } catch (error) {
     console.error('Error updating patient:', error);
     res.status(500).json({ message: 'Error updating patient details', error });
@@ -230,7 +279,19 @@ export const getPatient = async (req, res) => {
 
   try {
     // Find the patient by ID
-    const patient = await Patient.findByPk(id);
+    const patient = await Patient.findByPk(id, {
+      include: [
+        {
+        model: EmergencyContact,
+        as:'emergencycontact'
+        },
+        {
+          model: MedicalInformation,
+          as:'medicalinformation'
+
+        }
+      ]
+    });
 
     // Check if the patient exists
     if (!patient) {

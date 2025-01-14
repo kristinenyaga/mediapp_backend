@@ -5,7 +5,7 @@ const router = express.Router()
 
 router.post('/signup', signUp)
 router.post('/login', login)
-router.put('/:id', updatePatient)
+router.patch('/:id', updatePatient)
 router.get('/:id',getPatient)
 router.post('/verifyotp', verifyOTP)
 router.post('/resendotp',resendOTP)
