@@ -7,7 +7,7 @@ import dotenv from 'dotenv'
 import EmergencyContact from '../models/EmergencyContact.js';
 import MedicalInformation from '../models/MedicalInformation.js';
 dotenv.config()
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -39,7 +39,7 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const accessToken = jwt.sign({ id: patient.id, email: patient.email }, JWT_SECRET, { expiresIn: '1h' });
+    const accessToken = jwt.sign({ id: patient.id, username: patient.username, email: patient.email }, JWT_SECRET, { expiresIn: '1h' });
 
     const refreshToken = jwt.sign({ id: patient.id, email: patient.email }, JWT_SECRET, { expiresIn: '7d' });
 
@@ -305,3 +305,32 @@ export const getPatient = async (req, res) => {
   }
 };
 
+export const profile = async (req, res) => {
+  try {
+    const userId = req.user.id; 
+    const user =  await Patient.findByPk(userId, {
+      include: [
+        {
+        model: EmergencyContact,
+        as:'emergencycontact'
+        },
+        {
+          model: MedicalInformation,
+          as:'medicalinformation'
+
+        }
+      ],
+      attributes:{exclude:['password']}
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'user not found' });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+
+}
