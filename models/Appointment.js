@@ -7,7 +7,7 @@ const Appointment = sequelize.define('Appointment', {
     primaryKey: true,
     autoIncrement: true,
   },
-  patient_id: {
+  patientId: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
@@ -15,7 +15,7 @@ const Appointment = sequelize.define('Appointment', {
       key: 'id',
     },
   },
-  doctor_id: {
+  doctorId: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
@@ -27,8 +27,16 @@ const Appointment = sequelize.define('Appointment', {
     type: DataTypes.DATEONLY,
     allowNull: false,
   },
-  time: {
+  startTime: {
     type: DataTypes.TIME,
+    allowNull: false,
+  },
+  endTime: {
+    type: DataTypes.TIME,
+    allowNull: false,
+  },
+  appointmentDuration: {
+    type: DataTypes.STRING,
     allowNull: false,
   },
   status: {

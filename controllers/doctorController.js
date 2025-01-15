@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import otpGenerator from "otp-generator";
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
+import WorkingHours from '../models/WorkingHours.js';
 dotenv.config()
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
@@ -212,7 +213,12 @@ export const getAllDoctors = async (req, res)=> {
 export const getDoctorById = async (req, res) => {
   const id = req.params.id
   try {
-    const doctor = await Doctor.findByPk(id)
+    const doctor = await Doctor.findByPk(id, {
+      include: {
+        model: WorkingHours,
+        as:'workinghours'
+      }
+    })
     if (!doctor) {
       return res.status(404).json({message:'Doctor not found'})
     }
