@@ -32,7 +32,13 @@ const WorkingHours = sequelize.define('WorkingHours', {
   },
     
 },{
-  timestamps: true 
+  timestamps: true,
+  indexes:[
+    {
+      unique:true,
+      fields:['doctorId','dayOfWeek']
+    }
+  ]
 })
 
 export default WorkingHours
