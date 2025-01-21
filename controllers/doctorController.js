@@ -232,16 +232,74 @@ export const getDoctorById = async (req, res) => {
 //update doctor
 
 export const updateDoctor = async (req, res) => {
-  const id = req.params.id
   try {
-    const doctor = await Doctor.findByPk(id)
-    if (!doctor) {
-      return res.status(404).json({message:'Doctor not found'})
-    }
-    const updatedDoctor = await doctor.update(req.body)
-    return res.status(200).json(updatedDoctor)
-  } catch (error) {
-    console.error("Error updating a doctor:", error);
-    res.status(400).json({ error: error.message });
+      const { id } = req.user
+  const { section, updatedValues } = req.body
+  const doctor = await Doctor.findByPk(id)
+  if (!doctor) {
+    return res.status(404).json({message:'doctor not found'})
   }
+  if (section === "Personal Information") {
+    const { fullName, email, phone } = updatedValues
+    await doctor.update({
+      email: email || doctor.email,
+      username: fullName || doctor.username,
+      phone: phone || doctor.phone
+      
+    })
+  }
+  else if (section === "Proffesional Information") {
+    const { specialization, yearsOfExperience, roomNumber } = updatedValues
+    await doctor.update({
+      specialization: specialization || doctor.specialization,
+      room_number: roomNumber || doctor.room_number,
+      yearsOfExperience: yearsOfExperience || doctor.yearsOfExperience
+      
+    })
+  }
+  else if (section === "Working Hours") {
+    const { workingHours } = updatedValues
+    await doctor.update({
+      workingHours:JSON.stringify(workingHours)
+    })
+  }
+  else {
+      return res.status(400).json({ error: 'unable to update.' });
+  }
+    const updatedDoctor = await Doctor.findByPk(id);
+    res.status(200).json(updatedDoctor);
+    
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update profile. Please try again later.' });
+  }
+}
+  
+
+
+export const profile = async (req, res) => {
+  try {
+    const userId = req.user.id; 
+    const doctor =  await Doctor.findByPk(userId, {
+      attributes: {
+        exclude: ['password'],
+      },
+      include: [
+        {
+          model: WorkingHours,
+          as:'workinghours'
+        }
+      ]
+    });
+
+    if (!doctor) {
+      return res.status(404).json({ message: 'doctor not found' });
+    }
+
+    res.status(200).json(doctor);
+  } catch (error) {
+    console.error('Error fetching doctor profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+
 }
