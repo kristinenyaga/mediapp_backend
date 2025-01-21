@@ -4,23 +4,24 @@ import Doctor from "../models/Doctor.js";
 import Notification from "../models/Notification.js";
 import EmergencyContact from "../models/EmergencyContact.js";
 import MedicalInformation from "../models/MedicalInformation.js";
+import WorkingHours from "../models/WorkingHours.js";
 const defineAssociations = () => {
   Patient.hasMany(Appointment, {
-    foreignKey: 'patient_id', 
+    foreignKey: 'patientId', 
     as: 'appointments', 
   });
   Appointment.belongsTo(Patient, {
-    foreignKey: 'patient_id', 
+    foreignKey: 'patientId', 
     as: 'patient',
   });
   
   Doctor.hasMany(Appointment, {
-    foreignKey: 'doctor_id',
+    foreignKey: 'doctorId',
     as: 'appointments', 
   });
 
   Appointment.belongsTo(Doctor, {
-    foreignKey: 'doctor_id',
+    foreignKey: 'doctorId',
     as: 'doctor',
   });
 
@@ -33,6 +34,14 @@ const defineAssociations = () => {
     foreignKey: 'appointment_id',
     as: 'appointment',
   });
+  Doctor.hasMany(WorkingHours, {
+    foreignKey: 'doctorId',
+    as:'workinghours'
+  })
+  WorkingHours.belongsTo(Doctor, {
+    foreignKey: 'doctorId',
+    as:'doctor'
+  })
   Patient.hasOne(EmergencyContact, {
     foreignKey: 'patientId',
     as:'emergencycontact'
