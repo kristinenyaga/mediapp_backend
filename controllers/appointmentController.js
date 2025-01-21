@@ -12,84 +12,119 @@ import { format } from 'date-fns';
 
 
 export const bookAppointment = async (req, res) => {
-  const { doctorId, startTime, date, patientId } = req.body;
-  const appointmentDuration = 30;
+  const { doctorId, selectedTime, date } = req.body;
+  const patientId = req.user.id
+  const appointmentDuration = 30; // in minutes
+
   try {
-    if (!date || !startTime || !patientId) {
-      return res.status(400).json({ message: "Date, startTime, and patient ID are required" });
+    // Validate required fields
+    if (!date || !selectedTime || !patientId) {
+      return res.status(400).json({
+        message: "Date, selectedTime, and patient ID are required.",
+      });
     }
 
+    // Parse `selectedTime` into startTime and endTime
+    const [startTime, endTime] = selectedTime.split("-");
+    if (!startTime || !endTime) {
+      return res.status(400).json({
+        message: "Invalid selectedTime format. Use 'HH:mm-HH:mm'.",
+      });
+    }
+
+    // Check if the patient exists
     const patient = await Patient.findByPk(patientId);
     if (!patient) {
-      return res.status(404).json({ message: "Patient not found" });
+      return res.status(404).json({ message: "Patient not found." });
     }
 
     const patientEmail = patient.email;
     const appointmentDate = new Date(date);
-    const requestedTime = `${startTime}:00`; 
-    const endTime = new Date(`${date}T${startTime}:00`); 
-    endTime.setMinutes(endTime.getMinutes() + appointmentDuration);
+    const requestedTime = `${startTime}:00`; // Ensure proper format
+    const parsedEndTime = `${endTime}:00`;
+
     let selectedDoctor;
 
     if (doctorId) {
+      // Fetch the selected doctor and check availability
       selectedDoctor = await Doctor.findByPk(doctorId, {
         include: {
           model: WorkingHours,
-          as: 'workinghours',
+          as: "workinghours",
           where: {
             dayOfWeek: appointmentDate.toLocaleString("en-us", { weekday: "long" }),
             startTime: { [Op.lte]: requestedTime },
-            endTime: { [Op.gte]: endTime.toISOString().split('T')[1] },
+            endTime: { [Op.gte]: parsedEndTime },
           },
         },
       });
 
       if (!selectedDoctor) {
-        return res.status(404).json({ message: "Doctor not available at the requested startTime." });
+        return res.status(404).json({
+          message: "Selected doctor is not available at the requested time.",
+        });
       }
 
+      // Check for scheduling conflicts
       const conflict = await Appointment.findOne({
         where: {
           doctorId: selectedDoctor.id,
           date: appointmentDate,
-          [Op.or]: [
-            {
-              startTime: { [Op.between]: [requestedTime, endTime.toISOString().split('T')[1]] },
-            },
-            {
-              endTime: { [Op.between]: [requestedTime, endTime.toISOString().split('T')[1]] },
-            },
-          ],
+[Op.or]: [
+      {
+        // New appointment starts during an existing appointment
+        startTime: { [Op.lte]: requestedTime },
+        endTime: { [Op.gt]: requestedTime },
+      },
+      {
+        // New appointment ends during an existing appointment
+        startTime: { [Op.lt]: parsedEndTime },
+        endTime: { [Op.gte]: parsedEndTime },
+      },
+      {
+        // New appointment fully overlaps an existing appointment
+        startTime: { [Op.gte]: requestedTime },
+        endTime: { [Op.lte]: parsedEndTime },
+      },
+      {
+        // Existing appointment fully contained within the new appointment
+        startTime: { [Op.lte]: requestedTime },
+        endTime: { [Op.gte]: parsedEndTime },
+      },
+    ],
         },
       });
 
       if (conflict) {
-        return res.status(400).json({ message: "Requested startTime slot is already booked." });
+        return res.status(400).json({
+          message: "Selected time slot is already booked.",
+        });
       }
     } else {
+      // Assign a default available doctor
       const availableDoctor = await Doctor.findOne({
         include: [
           {
             model: WorkingHours,
-            as: 'workinghours',
+            as: "workinghours",
             where: {
               dayOfWeek: appointmentDate.toLocaleString("en-us", { weekday: "long" }),
               startTime: { [Op.lte]: requestedTime },
-              endTime: { [Op.gte]: endTime.toISOString().split('T')[1] },
+              endTime: { [Op.gte]: parsedEndTime },
             },
           },
           {
             model: Appointment,
-            as: 'appointments',
+            as: "appointments",
             required: false,
             where: {
               date: appointmentDate,
               [Op.or]: [
                 {
-                  startTime: { [Op.between]: [requestedTime, endTime.toISOString().split('T')[1]] },
+                  startTime: { [Op.between]: [requestedTime, parsedEndTime] },
                 },
                 {
-                  endTime: { [Op.between]: [requestedTime, endTime.toISOString().split('T')[1]] },
+                  endTime: { [Op.between]: [requestedTime, parsedEndTime] },
                 },
               ],
             },
@@ -98,16 +133,19 @@ export const bookAppointment = async (req, res) => {
       });
 
       if (!availableDoctor) {
-        return res.status(404).json({ message: "No doctors are available at the requested startTime." });
+        return res.status(404).json({
+          message: "No doctors are available at the requested time.",
+        });
       }
 
       selectedDoctor = availableDoctor;
     }
 
+    // Create the appointment
     const newAppointment = await Appointment.create({
       doctorId: selectedDoctor.id,
       startTime: requestedTime,
-      endTime: endTime.toISOString().split('T')[1], 
+      endTime: parsedEndTime,
       appointmentDuration,
       date: appointmentDate,
       patientId,
@@ -116,14 +154,19 @@ export const bookAppointment = async (req, res) => {
     res.status(201).json({
       message: "Appointment booked successfully.",
       appointment: newAppointment,
+      assignedDoctor: !doctorId ? selectedDoctor : undefined, // Include doctor info if auto-assigned
     });
 
+    // Notify patient and doctor
     handleAppointmentNotification(newAppointment, selectedDoctor, patientEmail, appointmentDate, requestedTime);
   } catch (error) {
     console.error("Error booking appointment:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({
+      message: "Internal server error.",
+    });
   }
 };
+
 
 
 export const cancelAppointment = async (req, res) => {
@@ -167,7 +210,7 @@ export const restoreAppointment = async (req, res) => {
 
 export const calculateAvailableSlots = async (req, res) => {
   const { doctorId, date, appointmentDuration = 30 } = req.body;
-
+  console.log(req.user)
   try {
     if (!date) {
       return res.status(400).json({ message: "Date is required to calculate available slots." });
@@ -205,7 +248,7 @@ export const calculateAvailableSlots = async (req, res) => {
     // Helper function to check if a time slot overlaps with existing appointments
     const isSlotAvailable = (slotStart, slotEnd) => {
       for (const appointment of existingAppointments) {
-        const appointmentStart = new Date(`${date}T${appointment.time}`);
+        const appointmentStart = new Date(`${date}T${appointment.startTime}`);
         const appointmentEnd = new Date(`${date}T${appointment.endTime}`);
         if (
           (slotStart >= appointmentStart && slotStart < appointmentEnd) || // Slot starts during an appointment
@@ -259,3 +302,58 @@ export const calculateAvailableSlots = async (req, res) => {
   }
 };
 
+
+export const getAppointments = async (req, res) => {
+    try {
+    const appointments = await Appointment.findAll()
+      return res.status(200).json(appointments)
+
+  } catch(error) {
+    console.error("Error getting all appointments:", error);
+    return res.status(500).json({ message: "Server error getting all appointments", error });
+  }
+}
+
+export const getAppointment = async (req, res) => {
+  try {
+    const { id } = req.params
+    const patientId = req.user.id
+
+    const appointment = await Appointment.findByPk(id, {
+      include: {
+        model: Doctor,
+        as:'doctor'
+      },
+      where:{patientId}
+    })
+
+    if (appointment) {
+      return res.status(200).json({appointment})
+    }
+    else {
+      return res.status(404).json({message:'appointment not found'})
+    }
+    
+  } catch (error) {
+     console.error("Error getting all appointments:", error);
+    return res.status(500).json({ message: "Server error getting appointment", error });
+  }
+}
+
+export const getPatientAppointments = async (req, res) => {
+  try {
+    const patientId = req.user.id; 
+    const appointments = await Appointment.findAll({
+      where: { patientId },
+      include: {
+        model: Doctor,
+        as: 'doctor'
+      }
+    });
+    res.status(200).json({ appointments });
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    res.status(500).json({ message: 'An error occurred while fetching appointments.' });
+  }
+  
+}
