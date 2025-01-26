@@ -5,6 +5,8 @@ import Notification from "../models/Notification.js";
 import EmergencyContact from "../models/EmergencyContact.js";
 import MedicalInformation from "../models/MedicalInformation.js";
 import WorkingHours from "../models/WorkingHours.js";
+import PatientSymptom from '../models/PatientSymptoms.js'
+
 const defineAssociations = () => {
   Patient.hasMany(Appointment, {
     foreignKey: 'patientId', 
@@ -29,6 +31,15 @@ const defineAssociations = () => {
     foreignKey: 'appointment_id',
     as: 'notifications', 
   });
+  Appointment.hasOne(PatientSymptom, {
+    foreignKey: 'appointmentId',
+    as: 'patientSymptom',
+    onDelete:'CASCADE'
+  })
+  PatientSymptom.belongsTo(Appointment, {
+    foreignKey: 'appointmentId',
+    as:'appointment'
+  })
 
   Notification.belongsTo(Appointment, {
     foreignKey: 'appointment_id',
