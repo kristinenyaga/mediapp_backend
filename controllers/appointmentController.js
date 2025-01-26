@@ -70,7 +70,7 @@ export const bookAppointment = async (req, res) => {
         where: {
           doctorId: selectedDoctor.id,
           date: appointmentDate,
-[Op.or]: [
+          [Op.or]: [
       {
         // New appointment starts during an existing appointment
         startTime: { [Op.lte]: requestedTime },
@@ -166,8 +166,6 @@ export const bookAppointment = async (req, res) => {
     });
   }
 };
-
-
 
 export const cancelAppointment = async (req, res) => {
   try {
@@ -356,4 +354,32 @@ export const getPatientAppointments = async (req, res) => {
     res.status(500).json({ message: 'An error occurred while fetching appointments.' });
   }
   
+}
+
+export const getDoctorAppointments = async (req,res)=>{
+  try{
+    const doctorId=req.user.id
+    const doctorAppointments =await  Appointment.findAll({
+      where:{doctorId},
+      include:[
+        {
+          model:Patient,
+          as:'patient',
+          attributes:{exclude:['password']}
+        },
+        {
+          model:Doctor,
+          as:'doctor',
+          attributes:{exclude:['password']}
+        }
+      ]
+    })
+
+    res.status(200).json(doctorAppointments)
+
+  }catch(error){
+    console.error('Error fetching appointments:', error);
+    res.status(500).json({ message: 'An error occurred while fetching appointments.' });
+
+  }
 }
