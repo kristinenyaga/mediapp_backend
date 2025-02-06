@@ -2,7 +2,7 @@ import { sequelize } from "../config/db.js";
 import { extractColumnsFromCsv } from "../utils/extractsColumnsFromCsv.js";
 import { DataTypes } from "sequelize";
 (async () => {
-  const filepath = "/home/kristine/Downloads/symbipredict_2022.csv";
+  const filepath = "/home/kristine/Desktop/symptomData.csv";
 
   try {
     const columns = await extractColumnsFromCsv(filepath);
