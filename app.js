@@ -9,6 +9,7 @@ import doctorRoutes from './routes/doctor.js'
 import workingHoursRoutes from './routes/workingHours.js'
 import symptomRoutes from './routes/symptoms.js'
 import patientSymptomsRoutes from './routes/patientSymptoms.js'
+import notificationRoutes from './routes/notification.js'
 dotenv.config();
 
 const app = express();
@@ -31,6 +32,7 @@ app.use('/api/doctor/',doctorRoutes)
 app.use('/api/workingHours', workingHoursRoutes)
 app.use('/api/symptoms', symptomRoutes)
 app.use("/api/patientsymptoms", patientSymptomsRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 
 app.get('/test-cookies', (req, res) => {
