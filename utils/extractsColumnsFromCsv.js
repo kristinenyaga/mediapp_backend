@@ -14,13 +14,3 @@ export const extractColumnsFromCsv = (filepath) => {
     
   })
 }
-
-(async () => {
-  const filepath = "/home/kristine/Downloads/symbipredict_2022.csv";
-  try {
-    const columns = extractColumnsFromCsv(filepath)
-    console.log('columns',columns)
-  } catch (error) {
-    console.log('error reading file',error)
-  }
-})()
