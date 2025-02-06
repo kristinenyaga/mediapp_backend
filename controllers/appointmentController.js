@@ -9,7 +9,8 @@ import WorkingHours from '../models/WorkingHours.js';
 import { Op } from 'sequelize';
 import * as tz from 'date-fns-tz';
 import { format } from 'date-fns';
-
+import PatientSymptom from '../models/PatientSymptoms.js';
+import Symptom from '../models/Symptom.js';
 
 export const bookAppointment = async (req, res) => {
   const { doctorId, selectedTime, date } = req.body;
@@ -318,20 +319,37 @@ export const getAppointment = async (req, res) => {
     const patientId = req.user.id
 
     const appointment = await Appointment.findByPk(id, {
-      include: {
-        model: Doctor,
-        as:'doctor'
-      },
-      where:{patientId}
-    })
-
-    if (appointment) {
-      return res.status(200).json({appointment})
-    }
-    else {
-      return res.status(404).json({message:'appointment not found'})
+      include: [
+        {
+          model: Doctor,
+          as: "doctor",
+        },
+        {
+          model: PatientSymptom,
+          as: "patientSymptom",
+        },
+      ],
+      where: { patientId },
+    });
+    if (!appointment) {
+      return res.status(404).json({ message: "appointment not found" });
     }
     
+    
+    let symptomIds = appointment.patientSymptom?.symptoms
+
+    const symptoms = await Symptom.findAll({
+      where: {
+        id:symptomIds
+      },
+      attributes:['name','id']
+    })
+
+    appointment.patientSymptom.symptoms = symptoms
+
+    return res.status(200).json({ appointment })
+    
+
   } catch (error) {
      console.error("Error getting all appointments:", error);
     return res.status(500).json({ message: "Server error getting appointment", error });
