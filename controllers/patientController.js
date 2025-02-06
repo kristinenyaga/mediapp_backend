@@ -20,6 +20,50 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const generateToken = (id, username, email) => {
+  const accessToken = jwt.sign(
+    { id, username, email },
+    JWT_SECRET,
+    { expiresIn: "1h" }
+  );
+
+  const refreshToken = jwt.sign(
+    { id,username, email, },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+  return { accessToken, refreshToken }
+  
+}
+export const refreshToken = async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    // Decode the token synchronously
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Generate a new access token
+    const { accessToken } = generateToken(
+      decoded.id,
+      decoded.username,
+      decoded.email
+    );
+
+    // Respond with the new access token
+    res.json({ accessToken });
+  } catch (err) {
+    // Handle invalid or expired token
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token expired" });
+    }
+    res.status(403).json({ message: "Forbidden" });
+  }
+};
+
 // Login
 export const login = async (req, res) => {
   const { email, password } = req.body;
@@ -39,9 +83,8 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const accessToken = jwt.sign({ id: patient.id, username: patient.username, email: patient.email }, JWT_SECRET, { expiresIn: '1h' });
-
-    const refreshToken = jwt.sign({ id: patient.id, email: patient.email }, JWT_SECRET, { expiresIn: '7d' });
+    const { accessToken, refreshToken } = generateToken(patient.id, patient.username, patient.email);
+    
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true, 
@@ -76,6 +119,7 @@ export const login = async (req, res) => {
     res.status(200).json({
       message: 'Login successful. OTP sent to email.',
       accessToken,
+      refreshToken,
       patient: { id: patient.id, username: patient.username, email: patient.email },
     });
   } catch (error) {
