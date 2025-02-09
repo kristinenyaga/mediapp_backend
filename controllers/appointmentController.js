@@ -336,16 +336,20 @@ export const getAppointment = async (req, res) => {
     }
     
     
-    let symptomIds = appointment.patientSymptom?.symptoms
 
-    const symptoms = await Symptom.findAll({
-      where: {
-        id:symptomIds
-      },
-      attributes:['name','id']
-    })
+    if (appointment.patientSymptom?.symptoms) {
+      let symptomIds = appointment.patientSymptom?.symptoms;
 
-    appointment.patientSymptom.symptoms = symptoms
+      const symptoms = await Symptom.findAll({
+        where: {
+          id: symptomIds,
+        },
+        attributes: ["name", "id"],
+      });
+
+      appointment.patientSymptom.symptoms = symptoms;
+    }
+
 
     return res.status(200).json({ appointment })
     
@@ -400,4 +404,39 @@ export const getDoctorAppointments = async (req,res)=>{
     res.status(500).json({ message: 'An error occurred while fetching appointments.' });
 
   }
+}
+
+export const updateAppointment = async (req, res) => {
+
+  try {
+    const { id } = req.params;
+    const { date, selectedTime } = req.body;
+    const appointment = await Appointment.findByPk(id);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found." });
+    }
+    
+    const [startTime, endTime] = selectedTime.split("-");
+
+    if (!startTime || !endTime) {
+      return res.status(400).json({
+        message: "Invalid selectedTime format. Use 'HH:mm-HH:mm'.",
+      });
+    }
+    
+    await appointment.update({
+      date,
+      startTime,
+      endTime
+    });
+
+    const updatedAppointment = await Appointment.findByPk(id)
+    return res.status(200).json(updatedAppointment)
+
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "An error occurred while fetching appointments.","error":error.message });
+  }
+  
 }
