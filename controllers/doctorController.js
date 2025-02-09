@@ -238,11 +238,15 @@ export const resendOTP = async (req, res) => {
   }
 };
 
-// get all doctors
 
 export const getAllDoctors = async (req, res)=> {
   try {
-    const doctors = await Doctor.findAll()
+    const doctors = await Doctor.findAll({
+      include: {
+        model: WorkingHours,
+        as: "workinghours",
+      },
+    });
       return res.status(200).json(doctors)
 
   } catch(error) {
@@ -276,7 +280,7 @@ export const getDoctorById = async (req, res) => {
 
 export const updateDoctor = async (req, res) => {
   try {
-      const { id } = req.user
+    const { id } = req.user
   const { section, updatedValues } = req.body
   const doctor = await Doctor.findByPk(id)
   if (!doctor) {
@@ -318,8 +322,6 @@ export const updateDoctor = async (req, res) => {
   }
 }
   
-
-
 export const profile = async (req, res) => {
   try {
     const userId = req.user.id; 
