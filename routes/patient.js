@@ -1,8 +1,9 @@
 import express from 'express'
-import { signUp, login, updatePatient, getPatient, verifyOTP, resendOTP, profile, refreshToken } from '../controllers/patientController.js'
+import { signUp, login, updatePatient, getPatient, verifyOTP, resendOTP, profile, refreshToken, getAllPatients } from '../controllers/patientController.js'
 import { Auth } from '../middleware/auth.js'
 const router = express.Router()
 
+router.get('/',getAllPatients)
 router.post('/signup', signUp)
 router.post('/login', login)
 router.get('/profile', Auth, profile)
