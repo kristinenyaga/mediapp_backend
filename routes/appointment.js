@@ -1,5 +1,15 @@
 import express from "express";
-import { bookAppointment, calculateAvailableSlots, getAppointment, getAppointments, getPatientAppointments,getDoctorAppointments, updateAppointment } from "../controllers/appointmentController.js";
+import {
+  bookAppointment,
+  calculateAvailableSlots,
+  getPatientAppointment,
+  getAppointments,
+  getPatientAppointments,
+  getDoctorAppointments,
+  updateAppointment,
+  cancelAppointment,
+  getAppointment,
+} from "../controllers/appointmentController.js";
 import { Auth } from "../middleware/auth.js";
 
 const router = express.Router()
@@ -9,7 +19,9 @@ router.get('/doctor-appointments',Auth,getDoctorAppointments)
 router.post('/book',Auth, bookAppointment)
 router.post('/available-slots', Auth, calculateAvailableSlots)
 router.get('/', getAppointments)
-router.get('/:id', Auth, getAppointment)
+router.get("/:id", getAppointment);
+router.delete("/:id", cancelAppointment);
+router.get("/:id", Auth, getPatientAppointment);
 router.patch("/:id", Auth, updateAppointment);
 
 
