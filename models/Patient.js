@@ -27,6 +27,14 @@ const Patient = sequelize.define('Patient', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  gender: {
+    type: DataTypes.STRING,
+    allowNull:false
+  },
+  dob: {
+    type: DataTypes.DATE,
+    allowNull:false
+  }
 });
 
 export default Patient;
