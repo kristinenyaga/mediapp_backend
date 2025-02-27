@@ -6,6 +6,7 @@ import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 import EmergencyContact from '../models/EmergencyContact.js';
 import MedicalInformation from '../models/MedicalInformation.js';
+import Appointment from '../models/Appointment.js';
 dotenv.config()
 const JWT_SECRET = process.env.JWT_SECRET
 
@@ -326,15 +327,19 @@ export const getPatient = async (req, res) => {
     const patient = await Patient.findByPk(id, {
       include: [
         {
-        model: EmergencyContact,
-        as:'emergencycontact'
+          model: EmergencyContact,
+          as: "emergencycontact",
         },
         {
           model: MedicalInformation,
-          as:'medicalinformation'
-
-        }
-      ]
+          as: "medicalinformation",
+        },
+        {
+          model: Appointment,
+          as: "appointments",
+        },
+      ],
+      attributes:{exclude:['password','createdAt','updatedAt']}
     });
 
     // Check if the patient exists
@@ -377,4 +382,31 @@ export const profile = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 
+}
+
+export const getAllPatients = async (req, res) => {
+  try {
+    const patients = await Patient.findAll({
+      include: [
+        {
+          model: Appointment,
+          as: "appointments",
+        },
+        {
+          model: EmergencyContact,
+          as: "emergencycontact",
+        },
+        {
+          model: MedicalInformation,
+          as: "medicalinformation",
+        },
+      ],
+      attributes: { exclude: ["password", "createdAt", "updatedAt"] },
+    });
+
+    return res.status(200).json(patients)
+  } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ message: "Server error" });
+  }
 }
