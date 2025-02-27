@@ -206,7 +206,6 @@ export const restoreAppointment = async (req, res) => {
   }
 };
 
-
 export const calculateAvailableSlots = async (req, res) => {
   const { doctorId, date, appointmentDuration = 30 } = req.body;
   console.log(req.user)
@@ -301,10 +300,22 @@ export const calculateAvailableSlots = async (req, res) => {
   }
 };
 
-
 export const getAppointments = async (req, res) => {
     try {
-    const appointments = await Appointment.findAll()
+      const appointments = await Appointment.findAll({
+        include: [
+          {
+            model: Patient,
+            as: "patient",
+          },
+          {
+            model: Doctor,
+            as: "doctor",
+          },
+        ],
+        attributes: { exclude: ['createdAt', 'updatedAt'] }
+        
+      });
       return res.status(200).json(appointments)
 
   } catch(error) {
@@ -313,7 +324,7 @@ export const getAppointments = async (req, res) => {
   }
 }
 
-export const getAppointment = async (req, res) => {
+export const getPatientAppointment = async (req, res) => {
   try {
     const { id } = req.params
     const patientId = req.user.id
@@ -368,7 +379,9 @@ export const getPatientAppointments = async (req, res) => {
       include: {
         model: Doctor,
         as: 'doctor'
-      }
+      },
+      attributes: { exclude: ['updatedAt', 'createdAt'], }
+      
     });
     res.status(200).json({ appointments });
   } catch (error) {
@@ -386,14 +399,19 @@ export const getDoctorAppointments = async (req,res)=>{
       include:[
         {
           model:Patient,
-          as:'patient',
+          as: 'patient',
+          include: {
+            model: Appointment,
+            as:'appointments'
+          },
           attributes:{exclude:['password']}
         },
         {
           model:Doctor,
           as:'doctor',
           attributes:{exclude:['password']}
-        }
+        },
+        
       ]
     })
 
@@ -439,4 +457,34 @@ export const updateAppointment = async (req, res) => {
       .json({ message: "An error occurred while fetching appointments.","error":error.message });
   }
   
+}
+
+export const getAppointment = async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    const appointment = await Appointment.findByPk(id, {
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+        },
+        {
+          model: PatientSymptom,
+          as: "patientSymptom",
+        },
+        {
+          model: Doctor,
+          as:'doctor'
+        }
+      ],
+      attributes:{exclude:['createdAt','updatedAt']}
+    });
+    return res.status(200).json(appointment)
+  } catch (error) {
+        return res
+      .status(500)
+      .json({ message: "An error occurred while fetching appointments.","error":error.message });
+  
+  }
 }

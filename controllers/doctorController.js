@@ -1,10 +1,12 @@
 import Doctor from '../models/Doctor.js';
+import Patient from '../models/Patient.js'
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import otpGenerator from "otp-generator";
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 import WorkingHours from '../models/WorkingHours.js';
+import Appointment from '../models/Appointment.js';
 dotenv.config()
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
@@ -242,10 +244,17 @@ export const resendOTP = async (req, res) => {
 export const getAllDoctors = async (req, res)=> {
   try {
     const doctors = await Doctor.findAll({
-      include: {
-        model: WorkingHours,
-        as: "workinghours",
-      },
+      include: [
+        {
+          model: WorkingHours,
+          as: "workinghours",
+        },
+        {
+          model: Appointment,
+          as: "appointments",
+        },
+      ],
+      attributes: { exclude: ["password","createdAt","updatedAt"] },
     });
       return res.status(200).json(doctors)
 
@@ -261,11 +270,25 @@ export const getDoctorById = async (req, res) => {
   const id = req.params.id
   try {
     const doctor = await Doctor.findByPk(id, {
-      include: {
-        model: WorkingHours,
-        as:'workinghours'
-      }
-    })
+      include: [
+        {
+          model: WorkingHours,
+          as: "workinghours",
+        },
+        {
+          model: Appointment,
+          as: "appointments",
+          include: [
+            {
+              model: Patient,
+              as: "patient",
+            },
+          ],
+          attributes:{exclude:['patientId','createdAt','updatedAt']}
+        },
+      ],
+      attributes: { exclude: ["password", "createdAt", "updatedAt"] },
+    });
     if (!doctor) {
       return res.status(404).json({message:'Doctor not found'})
     }
