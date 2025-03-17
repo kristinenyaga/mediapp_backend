@@ -1,27 +1,41 @@
 import PatientSymptom from "../models/PatientSymptoms.js"
 import Symptom from "../models/Symptom.js";
-import axios from 'axios'
+import Diagnosis from "../models/Diagnosis.js";
+import axios from "axios";
 
 export const submitSymptoms = async (req, res) => {
-
   try {
-  const { appointmentId, symptoms, additionalInfo } = req.body;
+    const { appointmentId, symptoms, additionalInfo } = req.body;
 
-    await PatientSymptom.create({
-      appointmentId,
-      symptoms,
-      additionalInfo
+    // Store symptoms
+    // const patientSymptom = await PatientSymptom.create({
+    //   appointmentId,
+    //   symptoms,
+    //   additionalInfo,
+    // });
+
+    // Predict diagnosis
+    const predictedDiagnosis = await predictDiagnosis(symptoms);
+
+    // Store prediction in the Diagnosis model
+    // const diagnosis = await Diagnosis.create({
+    //   appointmentId,
+    //   predictedDiagnosis,
+    // });
+
+    res.status(200).json({
+      message: "Symptoms submitted and diagnosis predicted successfully",
+      predictedDiagnosis,
+      // diagnosisId: diagnosis.id,
     });
-
-    res.status(200).json({ message: 'symptoms submitted successfully' })
-    predictDiagnosis(symptoms)
   } catch (error) {
-    console.log('error submitting symptoms', error)
+    console.error("Error submitting symptoms:", error);
     res
       .status(500)
       .json({ error: "An error occurred while submitting symptoms." });
   }
-}
+};
+
 
 export const updateSymptoms = async (req, res) => {
   try{
@@ -74,3 +88,35 @@ const predictDiagnosis = async (symptoms) => {
   console.log("Probabilities:", probabilities);
   
 }
+
+export const reviewDiagnosis = async (req, res) => {
+  try {
+    const { id } = req.params; // Diagnosis ID
+    const { isApproved, finalDiagnosis } = req.body;
+
+    const diagnosis = await Diagnosis.findByPk(id);
+    if (!diagnosis) {
+      return res.status(404).json({ message: "Diagnosis not found" });
+    }
+
+    // If doctor overrides, store the new diagnosis
+    if (finalDiagnosis) {
+      await diagnosis.update({
+        finalDiagnosis,
+        isApproved: false, // Since prediction is overridden, it's not "approved"
+      });
+    } else {
+      await diagnosis.update({ isApproved });
+    }
+
+    res.status(200).json({
+      message: "Diagnosis reviewed successfully",
+      diagnosis,
+    });
+  } catch (error) {
+    console.error("Error reviewing diagnosis:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while reviewing the diagnosis." });
+  }
+};

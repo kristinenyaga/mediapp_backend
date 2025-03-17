@@ -6,6 +6,8 @@ import EmergencyContact from "../models/EmergencyContact.js";
 import MedicalInformation from "../models/MedicalInformation.js";
 import WorkingHours from "../models/WorkingHours.js";
 import PatientSymptom from '../models/PatientSymptoms.js'
+import Feedback from "../models/Feedback.js";
+import Diagnosis from "../models/Diagnosis.js";
 
 const defineAssociations = () => {
   Patient.hasMany(Appointment, {
@@ -69,6 +71,27 @@ const defineAssociations = () => {
     foreignKey: 'patientId',
     as:'medicalinformation'
   })
+
+    Appointment.hasOne(Feedback, {
+      foreignKey: "appointmentId",
+      as: "feedback",
+    });
+
+    Feedback.belongsTo(Appointment, {
+      foreignKey: "appointmentId",
+      as: "appointment",
+    });
+
+    // Diagnosis relationship
+    Appointment.hasOne(Diagnosis, {
+      foreignKey: "appointmentId",
+      as: "diagnosis",
+    });
+
+    Diagnosis.belongsTo(Appointment, {
+      foreignKey: "appointmentId",
+      as: "appointment",
+    });
 };
 
 export default defineAssociations;

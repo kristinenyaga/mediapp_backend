@@ -157,9 +157,11 @@ export const bookAppointment = async (req, res) => {
       appointment: newAppointment,
       assignedDoctor: !doctorId ? selectedDoctor : undefined, // Include doctor info if auto-assigned
     });
-
+    type = 'appointment_confirmation'
+    emailTitle = 'Appointment Confirmation'
+    message = `Your appointment with Dr. ${selectedDoctor.username} on ${newAppointment.date} at ${newAppointment.startTime} has been confirmed.`;
     // Notify patient and doctor
-    handleAppointmentNotification(newAppointment, selectedDoctor, patientEmail, appointmentDate, requestedTime);
+    handleAppointmentNotification(newAppointment,type, emailTitle,message,selectedDoctor, patientEmail, appointmentDate, requestedTime);
   } catch (error) {
     console.error("Error booking appointment:", error);
     return res.status(500).json({
@@ -170,39 +172,44 @@ export const bookAppointment = async (req, res) => {
 
 export const cancelAppointment = async (req, res) => {
   try {
-    const { appointment_id } = req.body;  
-    const appointment = await Appointment.findByPk(appointment_id);
+    const { id } = req.params;  
+    const appointment = await Appointment.findByPk(id);
 
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    appointment.status = 'canceled'; 
+    appointment.status = 'cancelled'; 
     await appointment.save();
 
-    res.status(200).json({ message: 'Appointment canceled successfully' });
+    const cancelledAppointment = await Appointment.findByPk(id, {
+      include: [
+        {
+          model: Doctor,
+          as: "doctor",
+        },
+        {
+          model: Patient,
+          as: "patient",
+        },
+      ],
+    });
+
+        const type = "appointment_cancellation";
+        const emailTitle = "Appointment Cancellation";
+        const message = `Your appointment on ${cancelledAppointment.date} at ${cancelledAppointment.startTime} has been cancelled`;
+
+        handleAppointmentNotification(
+          cancelledAppointment,
+          type,
+          emailTitle,
+          message,
+        );
+
+    res.status(200).json(cancelledAppointment);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error canceling appointment' });
-  }
-};
-
-export const restoreAppointment = async (req, res) => {
-  try {
-    const { appointment_id } = req.body;  
-    const appointment = await Appointment.findByPk(appointment_id);
-
-    if (!appointment) {
-      return res.status(404).json({ message: 'Appointment not found' });
-    }
-
-    appointment.status = 'pending'; 
-    await appointment.save();
-
-    res.status(200).json({ message: 'Appointment restored successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error restoring appointment' });
   }
 };
 
@@ -458,6 +465,35 @@ export const updateAppointment = async (req, res) => {
   }
   
 }
+export const updateAppointmentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const appointment = await Appointment.findByPk(id);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found." });
+    }
+
+    if (!status) {
+      return res.status(400).json({ message: "Status is required." });
+    }
+
+    const feedbackStatus =
+      status.toLowerCase() === "completed"
+        ? "prompted"
+        : appointment.feedbackStatus;
+
+    await appointment.update({ status, feedbackStatus });
+
+    return res.status(200).json(appointment);
+  } catch (error) {
+    return res.status(500).json({
+      message: "An error occurred while updating the appointment status.",
+      error: error.message,
+    });
+  }
+};
 
 export const getAppointment = async (req, res) => {
   try {
@@ -480,6 +516,18 @@ export const getAppointment = async (req, res) => {
       ],
       attributes:{exclude:['createdAt','updatedAt']}
     });
+        if (appointment.patientSymptom?.symptoms) {
+          let symptomIds = appointment.patientSymptom?.symptoms;
+
+          const symptoms = await Symptom.findAll({
+            where: {
+              id: symptomIds,
+            },
+            attributes: ["name", "id"],
+          });
+
+          appointment.patientSymptom.symptoms = symptoms;
+        }
     return res.status(200).json(appointment)
   } catch (error) {
         return res
@@ -487,4 +535,90 @@ export const getAppointment = async (req, res) => {
       .json({ message: "An error occurred while fetching appointments.","error":error.message });
   
   }
+}
+
+export const getAvailableDoctors = async (req, res) => {
+  
+  try {
+    const { date, startTime, endTime } = req.body;
+
+    if (!date || !startTime || !endTime) {
+      return res
+        .status(400)
+        .json({ message: "Date, startTime, and endTime are required." });
+    }
+    const doctors = await Doctor.findAll()
+
+    const busyDoctors = await Appointment.findAll({
+      where: { date, startTime, endTime },
+      attributes:['doctorId']
+    })
+
+    const availableDoctors = doctors.filter(doctor => !busyDoctors.includes(doctor.id))
+    
+    res.status(200).json(availableDoctors)
+    
+  } catch (error) {
+    console.error("Error fetching available doctors:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export const reassignAppointment = async (req, res) => {
+  try {
+    const patientId = req.user.id;
+    const { id } = req.params;
+    const { doctorId } = req.body;
+
+    console.log(req.user)
+
+    const patient = await Patient.findByPk(patientId)
+    if (!patient) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    const appointment = await Appointment.findByPk(id);
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    await appointment.update({
+      doctorId,
+    });
+
+    const updatedAppointment = await Appointment.findByPk(id, {
+      include: [
+        {
+          model: Doctor,
+          as: "doctor",
+        },
+        {
+          model: Patient,
+          as: "patient",
+        },
+      ],
+    });
+    res.status(200).json(updatedAppointment)
+
+    const type = "appointment_update";
+    const emailTitle = "Appointment Update";
+    const message = `Your appointment has been reassigned to Dr. ${updatedAppointment.doctor.username} on ${updatedAppointment.date} at ${updatedAppointment.startTime}. (The time and date remain unchanged.)`;
+    
+    const patientEmail = patient.email
+    console.log(patientEmail)
+
+    handleAppointmentNotification(
+      updatedAppointment,
+      type,
+      emailTitle,
+      message,
+      patientEmail,
+    );
+  }
+  catch (error) {
+    console.error("Error reassigning a doctor", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+  
 }

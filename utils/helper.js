@@ -35,19 +35,21 @@ export const assignDoctorToAppointment = async (date, time, t) => {
   return availableDoctor;
 };
 
-export const handleAppointmentNotification = async (appointment, doctor, patientEmail, date, time) => {
+export const handleAppointmentNotification = async (appointment, type,emailTitle,message,patientEmail, date, time) => {
   try {
     const notification = await Notification.create({
-      type: 'appointment_confirmation',
-      recipient_email: patientEmail,
-      message: `Your appointment with Dr. ${doctor.username} on ${date} at ${time} has been confirmed.`,
-      status: 'pending',
+      type: type,
+      recipient_email: appointment.patient.email,
+      message: message,
+      status: appointment.status,
       appointment_id: appointment.id,
     });
 
+    console.log(notification)
+
     const emailSent = await sendEmail(
       notification.recipient_email,
-      'Appointment Confirmation',
+      emailTitle,
       notification.message
     );
 

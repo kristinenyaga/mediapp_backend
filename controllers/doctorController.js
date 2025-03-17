@@ -65,7 +65,30 @@ export const refreshToken = async (req, res) => {
   }
 };
 
+export const ResetPassword = async(req,res) => {
+  try {
+    const { email, password } = req.body
+    
+    const user = await Doctor.findOne({where:{ email }})
 
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password.toString(), 10);
+
+    await user.update({ password: hashedPassword })
+
+    if (user.isFirstLogin === true) {
+      await nvmuser.update({isFirstLogin:'false'})
+    }
+    
+
+    res.status(200).json({ message: "Password reset successful!" });
+  } catch (error) {
+     res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -119,7 +142,7 @@ export const login = async (req, res) => {
       message: 'Login successful. OTP sent to email.',
       accessToken,
       refreshToken,
-      doctor: { id: doctor.id, username: doctor.username, email: doctor.email },
+      doctor: { id: doctor.id, username: doctor.username, email: doctor.email,isFirstLogin:doctor.isFirstLogin },
     });
   } catch (error) {
     console.error('Login error:', error);

@@ -53,6 +53,11 @@ const Appointment = sequelize.define(
       allowNull: false,
       defaultValue: 1,
     },
+    feedbackStatus: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "pending",
+    },
   },
   {
     timestamps: true,

@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize'; 
 import { sequelize } from '../config/db.js'; 
 
-const Doctor = sequelize.define('Doctor', {
+const Doctor = sequelize.define("Doctor", {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -16,7 +16,7 @@ const Doctor = sequelize.define('Doctor', {
     allowNull: false,
     unique: true,
     validate: {
-      isEmail: true, 
+      isEmail: true,
     },
   },
   password: {
@@ -41,9 +41,11 @@ const Doctor = sequelize.define('Doctor', {
   },
   status: {
     type: DataTypes.STRING,
-    defaultValue: 'active', // Can be 'active', 'on leave'
+    defaultValue: "active", // Can be 'active', 'on leave'
   },
-
+  isFirstLogin: {
+    type: DataTypes.STRING,
+  },
 });
 
 export default Doctor;

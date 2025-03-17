@@ -65,7 +65,6 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-// Login
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -99,7 +98,6 @@ export const login = async (req, res) => {
     const otp = otpGenerator.generate(6, { digits: true, upperCaseAlphabets: false, specialChars: false });
     req.app.locals.OTP = { value: otp, expiresAt: Date.now() + 5 * 60 * 1000, attempts: 0 };
 
-    console.log('Generated OTP:', otp);
     await transporter.sendMail({
       from: process.env.EMAIL,
       to: patient.email,
@@ -212,11 +210,9 @@ export const resendOTP = async (req, res) => {
   }
 };
 
-
-
 // Signup
 export const signUp = async (req, res) => {
-  const { username, email, password, phone } = req.body;
+  const { username, email, password, phone,dob,gender } = req.body;
 
   try {
     // Check if the email is already in use
@@ -234,6 +230,8 @@ export const signUp = async (req, res) => {
       email,
       password: hashedPassword,
       phone,
+      dob,
+      gender
     });
 
     res.status(201).json({ message: 'Signup successful', patient: newPatient });
@@ -401,7 +399,7 @@ export const getAllPatients = async (req, res) => {
           as: "medicalinformation",
         },
       ],
-      attributes: { exclude: ["password", "createdAt", "updatedAt"] },
+      attributes: { exclude: ["password", "updatedAt"] },
     });
 
     return res.status(200).json(patients)

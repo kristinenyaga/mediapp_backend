@@ -1,11 +1,12 @@
 import express from 'express'
-import { getAllDoctors, getDoctorById, login, profile, refreshToken, resendOTP, signUp, updateDoctor, verifyOTP } from '../controllers/doctorController.js'
+import { getAllDoctors, getDoctorById, login, profile, refreshToken, resendOTP, ResetPassword, signUp, updateDoctor, verifyOTP } from '../controllers/doctorController.js'
 import { Auth } from '../middleware/auth.js'
 
 const router = express.Router()
 
 router.post('/signup',signUp)
 router.post('/login', login)
+router.post('/resetpassword',ResetPassword)
 router.post('/verifyotp',verifyOTP)
 router.post('/resendotp', resendOTP)
 router.post('refreshtoken',refreshToken)
