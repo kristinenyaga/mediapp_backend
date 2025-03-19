@@ -1,4 +1,6 @@
 import Patient from '../models/Patient.js';
+import Doctor from "../models/Doctor.js";
+import Admin from "../models/Admin.js";
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import otpGenerator from "otp-generator";
@@ -62,6 +64,84 @@ export const refreshToken = async (req, res) => {
       return res.status(401).json({ message: "Token expired" });
     }
     res.status(403).json({ message: "Forbidden" });
+  }
+};
+
+export const generateOtp = async (req, res) => {
+  try {
+    const { email,userType } = req.body
+    
+    let user;
+    if (userType === 'patient') {
+      user = await Patient.findOne({ where: { email } })
+    }
+    else if (userType === 'doctor') {
+      user = await Doctor.findOne({where:{email}})
+    }
+    else {
+      user = Admin.findOne({ where: { email } });
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." })
+    }
+
+    req.app.locals.OTP = null;
+    const otp = otpGenerator.generate(6, {
+      digits: true,
+      upperCaseAlphabets: false,
+      specialChars: false,
+    });
+    req.app.locals.OTP = {
+      value: otp,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+      attempts: 0,
+    };
+
+    await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: user.email, 
+      subject: "Your One-Time Password",
+      html: `
+        <html>
+          <body>
+            <h2>Hello ${user.username},</h2>
+            <p>Your one-time password (OTP) is:</p>
+            <h3>${otp}</h3>
+            <p>This OTP will expire in 5 minutes.</p>
+          </body>
+        </html>
+      `,
+    });
+    res.json({ message: "OTP sent successfully." });
+  } catch (error) {
+     res.status(500).json({ message: "Error sending OTP", error });
+  }
+}
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, newPassword, userType } = req.body;
+
+    let user;
+    if (userType === "patient") {
+      user = await Patient.findOne({ where: { email } });
+    } else if (userType === "doctor") {
+      user = await Doctor.findOne({ where: { email } });
+    } else {
+      user = await Admin.findOne({ where: { email } });
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword.toString(), 10);
+    await user.update({ password: hashedPassword });
+
+    res.json({ message: "Password reset successful. You can now log in." });
+  } catch (error) {
+    res.status(500).json({ message: "Error resetting password", error });
   }
 };
 
