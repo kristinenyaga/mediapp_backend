@@ -58,6 +58,9 @@ const Appointment = sequelize.define(
       allowNull: false,
       defaultValue: "pending",
     },
+    timeSlot: {
+      type: DataTypes.STRING,
+    },
   },
   {
     timestamps: true,
