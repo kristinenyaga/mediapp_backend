@@ -12,6 +12,7 @@ import patientSymptomsRoutes from './routes/patientSymptoms.js'
 import notificationRoutes from './routes/notification.js'
 import adminRoutes from './routes/admin.js'
 import feedbackRoutes from './routes/feedback.js'
+import diagnosisRoutes from './routes/diagnosis.js'
 
 dotenv.config();
 
@@ -38,6 +39,8 @@ app.use("/api/patientsymptoms", patientSymptomsRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes)
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/diagnosis", diagnosisRoutes);
+
 
 
 app.get('/test-cookies', (req, res) => {
