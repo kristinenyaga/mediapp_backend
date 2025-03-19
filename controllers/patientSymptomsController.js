@@ -7,26 +7,23 @@ export const submitSymptoms = async (req, res) => {
   try {
     const { appointmentId, symptoms, additionalInfo } = req.body;
 
-    // Store symptoms
-    // const patientSymptom = await PatientSymptom.create({
-    //   appointmentId,
-    //   symptoms,
-    //   additionalInfo,
-    // });
+    const patientSymptom = await PatientSymptom.create({
+      appointmentId,
+      symptoms,
+      additionalInfo,
+    });
 
     // Predict diagnosis
     const predictedDiagnosis = await predictDiagnosis(symptoms);
 
     // Store prediction in the Diagnosis model
-    // const diagnosis = await Diagnosis.create({
-    //   appointmentId,
-    //   predictedDiagnosis,
-    // });
+    const diagnosis = await Diagnosis.create({
+      appointmentId,
+      predictedDiagnosis,
+    });
 
     res.status(200).json({
       message: "Symptoms submitted and diagnosis predicted successfully",
-      predictedDiagnosis,
-      // diagnosisId: diagnosis.id,
     });
   } catch (error) {
     console.error("Error submitting symptoms:", error);
@@ -41,7 +38,7 @@ export const updateSymptoms = async (req, res) => {
   try{
     const { id } = req.params;
     const symptom = await PatientSymptom.findByPk(id);
-    const { symptoms, additionalInfo } = req.body;
+    const { symptoms, additionalInfo,appointmentId } = req.body;
 
     if (!symptom) {
       return res.status(404).json({ message: "symptom not found" });
@@ -52,6 +49,20 @@ export const updateSymptoms = async (req, res) => {
       additionalInfo,
     });
 
+    const predictedDiagnosis = await predictDiagnosis(symptoms);
+    let diagnosis = await Diagnosis.findOne({ where: { appointmentId } });
+
+    if (diagnosis) {
+      await diagnosis.update({ predictedDiagnosis });
+      
+    }
+    else {
+      await Diagnosis.create({
+        appointmentId,
+        predictedDiagnosis,
+      });
+    }
+    
     const updatedSymptoms = await PatientSymptom.findByPk(id);
     return res.status(200).json(updatedSymptoms);
   } catch (error) {
@@ -83,9 +94,9 @@ const predictDiagnosis = async (symptoms) => {
   });
 
   
-  const { prediction, probabilities } = modelResponse.data;
-  console.log("Predicted Diagnosis:", prediction);
-  console.log("Probabilities:", probabilities);
+  const { predicted_disease, probabilities } = modelResponse.data;
+
+  return predicted_disease
   
 }
 
