@@ -215,7 +215,6 @@ export const cancelAppointment = async (req, res) => {
 
 export const calculateAvailableSlots = async (req, res) => {
   const { doctorId, date, appointmentDuration = 30 } = req.body;
-  console.log(req.user)
   try {
     if (!date) {
       return res.status(400).json({ message: "Date is required to calculate available slots." });
@@ -242,6 +241,7 @@ export const calculateAvailableSlots = async (req, res) => {
     // Fetch existing appointments for the doctor(s) on the given date
     let appointmentsQuery = {
       where: { date: appointmentDate },
+      status:{[Op.ne]:"cancelled"}
     };
 
     if (doctorId) {
@@ -275,10 +275,6 @@ export const calculateAvailableSlots = async (req, res) => {
 
       const formattedStartTime = tz.format(startTime, 'yyyy-MM-dd HH:mm:ssXXX', { timeZone });
       const formattedEndTime = tz.format(endTime, 'yyyy-MM-dd HH:mm:ssXXX', { timeZone });
-
-      // Log the formatted times
-      console.log('Formatted startTime:', formattedStartTime);
-      console.log('Formatted endTime:', formattedEndTime);
 
       let currentSlotStart = new Date(startTime);
       while (currentSlotStart < endTime) {
@@ -336,6 +332,8 @@ export const getPatientAppointment = async (req, res) => {
     const { id } = req.params
     const patientId = req.user.id
 
+    console.log("triggered");
+
     const appointment = await Appointment.findByPk(id, {
       include: [
         {
@@ -353,6 +351,16 @@ export const getPatientAppointment = async (req, res) => {
       return res.status(404).json({ message: "appointment not found" });
     }
     
+    const getTimeslot = (startTime) => {
+      console.log('start time',startTime)
+      const hour = parseInt(startTime.split(":")[0], 10);
+      return hour < 12 ? "morning" : "afternoon";
+    }
+    // Add timeslot field to the response
+    const appointmentData = {
+      ...appointment.toJSON(),
+      timeSlot: getTimeslot(appointment.startTime),
+    };
     
 
     if (appointment.patientSymptom?.symptoms) {
@@ -365,11 +373,11 @@ export const getPatientAppointment = async (req, res) => {
         attributes: ["name", "id"],
       });
 
-      appointment.patientSymptom.symptoms = symptoms;
+      appointmentData.patientSymptom.symptoms = symptoms;
     }
 
 
-    return res.status(200).json({ appointment })
+    return res.status(200).json({ appointmentData })
     
 
   } catch (error) {
@@ -470,7 +478,14 @@ export const updateAppointmentStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const appointment = await Appointment.findByPk(id);
+    const appointment = await Appointment.findByPk(id, {
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+        },
+      ],
+    });
     if (!appointment) {
       return res.status(404).json({ message: "Appointment not found." });
     }
@@ -486,7 +501,48 @@ export const updateAppointmentStatus = async (req, res) => {
 
     await appointment.update({ status, feedbackStatus });
 
-    return res.status(200).json(appointment);
+    res.status(200).json(appointment);
+
+    if (status === 'completed') {
+      const type = "appointment_update";
+      const emailTitle = "Appointment Update";
+      const message = `Your appointment has been completed`
+      const patientEmail = appointment.patient.email;
+      
+      handleAppointmentNotification(
+        appointment,
+        type,
+        emailTitle,
+        message,
+        patientEmail
+      );
+    }
+    else if (status === 'cancelled') {
+      const type = "appointment_update";
+      const emailTitle = "Appointment Cancellation";
+      const message = `Your appointment has been cancelled`;
+      const patientEmail = appointment.patient.emai
+      handleAppointmentNotification(
+        appointment,
+        type,
+        emailTitle,
+        message,
+        patientEmail
+      );
+    }
+    else {
+      const type = "appointment_update";
+      const emailTitle = "Appointment Restored";
+      const message = `Your appointment has been restored at ${appointment.startTime}`;
+      const patientEmail = appointment.patient.emai;
+      handleAppointmentNotification(
+        appointment,
+        type,
+        emailTitle,
+        message,
+        patientEmail
+      );
+    }
   } catch (error) {
     return res.status(500).json({
       message: "An error occurred while updating the appointment status.",
@@ -498,7 +554,6 @@ export const updateAppointmentStatus = async (req, res) => {
 export const getAppointment = async (req, res) => {
   try {
     const { id } = req.params
-    
     const appointment = await Appointment.findByPk(id, {
       include: [
         {
@@ -516,6 +571,17 @@ export const getAppointment = async (req, res) => {
       ],
       attributes:{exclude:['createdAt','updatedAt']}
     });
+
+    const getTimeslot = (startTime) => {
+      console.log("start time", startTime);
+      const hour = parseInt(startTime.split(":")[0], 10);
+      return hour < 12 ? "morning" : "afternoon";
+    };
+        // Add timeslot field to the response
+        const appointmentData = {
+          ...appointment.toJSON(),
+          timeSlot: getTimeslot(appointment.startTime),
+        };
         if (appointment.patientSymptom?.symptoms) {
           let symptomIds = appointment.patientSymptom?.symptoms;
 
@@ -526,9 +592,9 @@ export const getAppointment = async (req, res) => {
             attributes: ["name", "id"],
           });
 
-          appointment.patientSymptom.symptoms = symptoms;
+          appointmentData.patientSymptom.symptoms = symptoms;
         }
-    return res.status(200).json(appointment)
+    return res.status(200).json(appointmentData)
   } catch (error) {
         return res
       .status(500)
@@ -570,7 +636,6 @@ export const reassignAppointment = async (req, res) => {
     const { id } = req.params;
     const { doctorId } = req.body;
 
-    console.log(req.user)
 
     const patient = await Patient.findByPk(patientId)
     if (!patient) {
@@ -606,7 +671,6 @@ export const reassignAppointment = async (req, res) => {
     const message = `Your appointment has been reassigned to Dr. ${updatedAppointment.doctor.username} on ${updatedAppointment.date} at ${updatedAppointment.startTime}. (The time and date remain unchanged.)`;
     
     const patientEmail = patient.email
-    console.log(patientEmail)
 
     handleAppointmentNotification(
       updatedAppointment,
