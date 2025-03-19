@@ -41,7 +41,6 @@ export const handleAppointmentNotification = async (appointment, type,emailTitle
       type: type,
       recipient_email: appointment.patient.email,
       message: message,
-      status: appointment.status,
       appointment_id: appointment.id,
     });
 
