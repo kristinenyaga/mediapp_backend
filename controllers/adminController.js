@@ -195,25 +195,32 @@ const generatePassword = () => {
   return Math.random().toString(36).slice(-8)
 }
 
-export const addDoctor = async () => {
+export const addDoctor = async (req, res) => {
   try {
+    console.log("Received payload:", req.body); // Debugging log
+
     const { doctors } = req.body;
-    if (!Array.isArray(doctors) || doctors.length === 0) {
-      return res.status(400).json({ message: "invalid doctor data" });
+
+    // Check if doctors is defined and an array
+    if (!doctors || !Array.isArray(doctors) || doctors.length === 0) {
+      console.error("Invalid doctors array:", doctors); // Debugging log
+      return res.status(400).json({ message: "Invalid doctor data" });
     }
 
     await Promise.all(
       doctors.map(async (doctor) => {
+        console.log("Processing doctor:", doctor); // Debugging log
+
         const password = generatePassword();
         const hashedPassword = await bcrypt.hash(password, 10);
 
         await Doctor.create({
-          username: doctors.username,
+          username: doctor.username,
           email: doctor.email,
           phone: doctor.phone,
           specialization: doctor.specialization,
-          experience: doctor.experience,
-          roomNumber: doctor.roomNumber,
+          yearsOfExperience: doctor.experience,
+          room_number: doctor.roomNumber,
           password: hashedPassword,
           isFirstLogin: true,
         });
@@ -226,11 +233,11 @@ export const addDoctor = async () => {
         });
       })
     );
-    res
-      .status(201)
-      .json({ message: "Doctors added successfully!" });
+
+    res.status(201).json({ message: "Doctors added successfully!" });
   } catch (error) {
     console.error("Error adding doctors:", error);
     res.status(500).json({ message: "Server error. Please try again later." });
   }
-}
+};
+
