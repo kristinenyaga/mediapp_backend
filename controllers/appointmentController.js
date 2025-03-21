@@ -157,9 +157,9 @@ export const bookAppointment = async (req, res) => {
       appointment: newAppointment,
       assignedDoctor: !doctorId ? selectedDoctor : undefined, // Include doctor info if auto-assigned
     });
-    type = 'appointment_confirmation'
-    emailTitle = 'Appointment Confirmation'
-    message = `Your appointment with Dr. ${selectedDoctor.username} on ${newAppointment.date} at ${newAppointment.startTime} has been confirmed.`;
+    const type = 'appointment_confirmation'
+    const emailTitle = 'Appointment Confirmation'
+    const message = `Your appointment with Dr. ${selectedDoctor.username} on ${newAppointment.date} at ${newAppointment.startTime} has been confirmed.`;
     // Notify patient and doctor
     handleAppointmentNotification(newAppointment,type, emailTitle,message,selectedDoctor, patientEmail, appointmentDate, requestedTime);
   } catch (error) {
