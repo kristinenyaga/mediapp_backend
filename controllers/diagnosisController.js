@@ -79,3 +79,19 @@ export const updateDiagnosis = async (req, res) => {
     res.status(500).json({ message: "Internal server error." });
   }
 };
+
+
+export const getAllDiagnoses = async (req, res) => {
+  try {
+    const diagnoses = await Diagnosis.findAll();
+
+    res.status(200).json({
+      success: true,
+      count: diagnoses.length,
+      data: diagnoses,
+    });
+  } catch (error) {
+    console.error("Error fetching diagnoses:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};

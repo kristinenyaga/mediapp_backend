@@ -69,3 +69,19 @@ export const submitFeedback = async (req, res) => {
     });
   }
 };
+
+export const getAllFeedback = async (req, res) => {
+  try {
+    // Fetch all feedback from the database
+    const feedback = await Feedback.findAll();
+
+    res.status(200).json({
+      success: true,
+      count: feedback.length,
+      data: feedback,
+    });
+  } catch (error) {
+    console.error("Error fetching feedback:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
