@@ -219,7 +219,7 @@ export const calculateAvailableSlots = async (req, res) => {
     if (!date) {
       return res.status(400).json({ message: "Date is required to calculate available slots." });
     }
-
+    
     const appointmentDate = new Date(date);
     const dayOfWeek = appointmentDate.toLocaleString("en-us", { weekday: "long" });
 
@@ -240,21 +240,28 @@ export const calculateAvailableSlots = async (req, res) => {
 
     // Fetch existing appointments for the doctor(s) on the given date
     let appointmentsQuery = {
-      where: { date: appointmentDate },
-      status:{[Op.ne]:"cancelled"}
+      where: {
+        date: {
+          [Op.eq]: date,
+        },
+        status: { [Op.ne]: "cancelled" },
+      },
     };
-
+    console.log("appointmentsQuery", appointmentsQuery);
+    
     if (doctorId) {
       appointmentsQuery.where.doctorId = doctorId;
     }
 
     const existingAppointments = await Appointment.findAll(appointmentsQuery);
 
+    console.log("existingAppointments", existingAppointments);
+
     // Helper function to check if a time slot overlaps with existing appointments
     const isSlotAvailable = (slotStart, slotEnd) => {
       for (const appointment of existingAppointments) {
-        const appointmentStart = new Date(`${date}T${appointment.startTime}`);
-        const appointmentEnd = new Date(`${date}T${appointment.endTime}`);
+    const appointmentStart = new Date(`${date}T${appointment.startTime}`);
+    const appointmentEnd = new Date(`${date}T${appointment.endTime}`);
         if (
           (slotStart >= appointmentStart && slotStart < appointmentEnd) || // Slot starts during an appointment
           (slotEnd > appointmentStart && slotEnd <= appointmentEnd) || // Slot ends during an appointment
@@ -272,6 +279,7 @@ export const calculateAvailableSlots = async (req, res) => {
     for (const hours of workingHours) {
       const startTime = new Date(`${date}T${hours.startTime}`);
       const endTime = new Date(`${date}T${hours.endTime}`);
+
 
       const formattedStartTime = tz.format(startTime, 'yyyy-MM-dd HH:mm:ssXXX', { timeZone });
       const formattedEndTime = tz.format(endTime, 'yyyy-MM-dd HH:mm:ssXXX', { timeZone });

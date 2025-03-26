@@ -1,4 +1,7 @@
+import Appointment from "../models/Appointment.js";
 import Diagnosis from "../models/Diagnosis.js";
+import PatientSymptom from "../models/PatientSymptoms.js";
+import Symptom from "../models/Symptom.js";
 
 export const getDiagnosisByAppointment = async (req, res) => {
   const { appointmentId } = req.params;
@@ -83,15 +86,62 @@ export const updateDiagnosis = async (req, res) => {
 
 export const getAllDiagnoses = async (req, res) => {
   try {
-    const diagnoses = await Diagnosis.findAll();
+    // Fetch all symptoms from the database
+    const allSymptoms = await Symptom.findAll({
+      attributes: ["id", "name"],
+    });
+
+    // Create a mapping of symptom ID -> Name
+    const symptomMap = {};
+    allSymptoms.forEach((symptom) => {
+      symptomMap[symptom.id] = symptom.name;
+    });
+
+    // Fetch diagnoses with related data
+    const diagnoses = await Diagnosis.findAll({
+      include: [
+        {
+          model: Appointment,
+          as: "appointment",
+          attributes: ["date"],
+          include: [
+            {
+              model: PatientSymptom,
+              as: "patientSymptom",
+              attributes: ["additionalInfo", "symptoms"],
+            },
+          ],
+        },
+      ],
+    });
+
+    // Transform response: Convert symptom IDs to names
+    const diagnosesWithSymptoms = diagnoses.map((diagnosis) => {
+      if (diagnosis.appointment && diagnosis.appointment.patientSymptom) {
+        const symptomIds = diagnosis.appointment.patientSymptom.symptoms || [];
+
+        // Convert IDs to names
+        const symptomNames = symptomIds.map(
+          (id) => symptomMap[id] || "Unknown Symptom"
+        );
+
+        // Attach the mapped symptom names
+        diagnosis.appointment.patientSymptom.symptomDetails = symptomNames;
+      }
+      return diagnosis;
+    });
 
     res.status(200).json({
       success: true,
-      count: diagnoses.length,
-      data: diagnoses,
+      count: diagnosesWithSymptoms.length,
+      data: diagnosesWithSymptoms,
     });
   } catch (error) {
     console.error("Error fetching diagnoses:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
+
+

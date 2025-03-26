@@ -33,7 +33,6 @@ export const submitSymptoms = async (req, res) => {
   }
 };
 
-
 export const updateSymptoms = async (req, res) => {
   try{
     const { id } = req.params;
@@ -83,9 +82,14 @@ const predictDiagnosis = async (symptoms) => {
   const symptomVector = new Array(131).fill(0)
 
   symptoms.forEach(id => {
+    console.log('id',id)
     symptomVector[id-1] = 1
   });
   const symptom_names = allSymptoms.map((symptom) => symptom.name);
+
+  console.log('symptom_names',symptom_names)
+  console.log("symptom_vector",symptomVector);
+
   
 
   const modelResponse = await axios.post("http://127.0.0.1:8080/predict", {
@@ -129,5 +133,45 @@ export const reviewDiagnosis = async (req, res) => {
     res
       .status(500)
       .json({ error: "An error occurred while reviewing the diagnosis." });
+  }
+};
+
+
+export const getPatientSymptoms = async (req, res) => {
+  try {
+    const patientSymptoms = await PatientSymptom.findAll();
+
+    // Map over the results and replace symptom IDs with their actual names
+    const transformedData = await Promise.all(
+      patientSymptoms.map(async (record) => {
+        // If symptoms exist, fetch their names
+        let symptomNames = [];
+        if (record.symptoms.length > 0) {
+          const symptoms = await Symptom.findAll({
+            where: { id: record.symptoms }, // Match against symptom IDs
+            attributes: ["name"],
+          });
+          symptomNames = symptoms.map((s) => s.name); // Extract names
+        }
+
+        return {
+          id: record.id,
+          additionalInfo: record.additionalInfo,
+          appointmentId: record.appointmentId,
+          symptoms: symptomNames, // Use names instead of IDs
+          createdAt: record.createdAt,
+          updatedAt: record.updatedAt,
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      count: transformedData.length,
+      data: transformedData,
+    });
+  } catch (error) {
+    console.error("Error fetching patient symptoms:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };

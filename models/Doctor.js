@@ -44,7 +44,8 @@ const Doctor = sequelize.define("Doctor", {
     defaultValue: "active", // Can be 'active', 'on leave'
   },
   isFirstLogin: {
-    type: DataTypes.STRING,
+    type: DataTypes.BOOLEAN,
+    
   },
 });
 

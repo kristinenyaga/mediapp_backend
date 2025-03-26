@@ -1,6 +1,7 @@
 import express from "express";
 import {
   declineFeedback,
+  fetchDoctorFeedbacks,
   getAllFeedback,
   submitFeedback,
 } from "../controllers/feedbackController.js";
@@ -11,6 +12,7 @@ const router = express.Router();
 router.get("/",getAllFeedback)
 router.patch("/appointments/:appointmentId/decline",Auth, declineFeedback);
 
-router.post("/appointments/:appointmentId/submit",Auth, submitFeedback);
+router.post("/appointments/:appointmentId/submit", Auth, submitFeedback);
+router.get("/doctorfeedbacks",Auth,fetchDoctorFeedbacks)
 
 export default router

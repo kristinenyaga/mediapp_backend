@@ -15,6 +15,14 @@ const Feedback = sequelize.define("Feedback", {
       key: "id",
     },
   },
+  doctorId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: "Doctors",
+      key: "id",
+    },
+  },
   patientId: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -34,7 +42,10 @@ const Feedback = sequelize.define("Feedback", {
   comment: {
     type: DataTypes.TEXT,
     allowNull: true,
-  }
-});
+  },
+},{
+  timestamps: true // ✅ Ensures createdAt & updatedAt are handled automatically
+}
+);
 
 export default Feedback;

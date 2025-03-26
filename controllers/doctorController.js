@@ -104,7 +104,9 @@ export const login = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password.toString(), doctor.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res
+        .status(401)
+        .json({ message: "Password does not match: Try Again" });
     }
     const { accessToken, refreshToken } = generateToken(doctor.id, doctor.username, doctor.email);
 
@@ -142,7 +144,9 @@ export const login = async (req, res) => {
       message: 'Login successful. OTP sent to email.',
       accessToken,
       refreshToken,
-      doctor: { id: doctor.id, username: doctor.username, email: doctor.email,isFirstLogin:doctor.isFirstLogin },
+      doctor: { id: doctor.id, username: doctor.username, email: doctor.email, isFirstLogin: doctor.isFirstLogin },
+      email: doctor.email,
+      username:doctor.username
     });
   } catch (error) {
     console.error('Login error:', error);

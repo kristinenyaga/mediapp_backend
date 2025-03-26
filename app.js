@@ -24,6 +24,13 @@ app.use(cors({
   credentials: true, // Allow cookies to be sent
 }));
 
+// app.use(
+//   cors({
+//     origin: "https://medicare-neon-iota.vercel.app", // Frontend URL
+//     credentials: true, // Allow cookies to be sent
+//   })
+// );
+
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('tiny'));
 app.disable('x-powered-by'); // Hide "X-Powered-By" header

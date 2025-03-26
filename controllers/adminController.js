@@ -74,7 +74,9 @@ export const Login = async (req,res) => {
     console.log(isMatch);
 
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res
+        .status(401)
+        .json({ message: "Password does not match: Try Again" });
     }
     const { accessToken, refreshToken } = generateToken(admin.id, admin.name, admin.email);
 
@@ -89,7 +91,7 @@ export const Login = async (req,res) => {
       html: `
         <html>
           <body>
-            <h2>Hello ${admin.name},</h2>
+            <h2>Hello ${admin.username},</h2>
             <p>Your one-time password (OTP) is:</p>
             <h3>${otp}</h3>
             <p>Please use this OTP to log in. It will expire in 5 minutes.</p>
@@ -102,6 +104,8 @@ export const Login = async (req,res) => {
       message: 'Login successful. OTP sent to email.',
       accessToken,
       refreshToken,
+      username: admin.username,
+      email:admin.email
     });
   }
   catch (error) {
@@ -197,7 +201,6 @@ const generatePassword = () => {
 
 export const addDoctor = async (req, res) => {
   try {
-    console.log("Received payload:", req.body); // Debugging log
 
     const { doctors } = req.body;
 
@@ -209,35 +212,50 @@ export const addDoctor = async (req, res) => {
 
     await Promise.all(
       doctors.map(async (doctor) => {
-        console.log("Processing doctor:", doctor); // Debugging log
+        try {
+          const password = generatePassword();
+          const hashedPassword = await bcrypt.hash(password, 10);
 
-        const password = generatePassword();
-        const hashedPassword = await bcrypt.hash(password, 10);
+          await Doctor.create({
+            username: doctor.username,
+            email: doctor.email,
+            phone: doctor.phone,
+            specialization: doctor.specialization,
+            yearsOfExperience: doctor.experience,
+            room_number: doctor.roomNumber,
+            password: hashedPassword,
+            isFirstLogin: true,
+          });
 
-        await Doctor.create({
-          username: doctor.username,
-          email: doctor.email,
-          phone: doctor.phone,
-          specialization: doctor.specialization,
-          yearsOfExperience: doctor.experience,
-          room_number: doctor.roomNumber,
-          password: hashedPassword,
-          isFirstLogin: true,
-        });
-
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: doctor.email,
-          subject: "Your Doctor Account Details",
-          text: `Hello ${doctor.username},\n\nYour account has been created.\nLogin details:\nEmail: ${doctor.email}\nPassword: ${password}\n\nPlease log in and change your password immediately.`,
-        });
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: doctor.email,
+            subject: "Your Doctor Account Details",
+            text: `Hello ${doctor.username},\n\nYour account has been created.\nLogin details:\nEmail: ${doctor.email}\nPassword: ${password}\n\nPlease log in and change your password immediately.`,
+          });
+        } catch (error) {
+          if (error.name === "SequelizeUniqueConstraintError") {
+            console.error(
+              `Duplicate email error: ${doctor.email} already exists.`
+            );
+            throw new Error(`Email '${doctor.email}' is already registered.`);
+          }
+          throw error; // Re-throw other errors
+        }
       })
     );
 
     res.status(201).json({ message: "Doctors added successfully!" });
   } catch (error) {
     console.error("Error adding doctors:", error);
-    res.status(500).json({ message: "Server error. Please try again later." });
+
+    if (error.message.includes("already registered")) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    res
+      .status(500)
+      .json({ message: "An error occurred while adding doctors." });
   }
 };
 

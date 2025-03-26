@@ -8,7 +8,8 @@ import WorkingHours from "../models/WorkingHours.js";
 import PatientSymptom from '../models/PatientSymptoms.js'
 import Feedback from "../models/Feedback.js";
 import Diagnosis from "../models/Diagnosis.js";
-
+import Symptom from "../models/Symptom.js";
+import PatientSymptomSymptom from "../models/PatientSymptomSymptom.js";
 const defineAssociations = () => {
   Patient.hasMany(Appointment, {
     foreignKey: 'patientId', 
@@ -81,6 +82,15 @@ const defineAssociations = () => {
       foreignKey: "appointmentId",
       as: "appointment",
     });
+  
+  Doctor.hasMany(Feedback,
+    {
+      foreignKey: "doctorId",
+      as: "feedbacks"
+    });
+  Feedback.belongsTo(Doctor, {
+    foreignKey: "doctorId", as: "doctor"
+  });
 
     // Diagnosis relationship
     Appointment.hasOne(Diagnosis, {
@@ -92,6 +102,20 @@ const defineAssociations = () => {
       foreignKey: "appointmentId",
       as: "appointment",
     });
+  
+PatientSymptom.belongsToMany(Symptom, {
+  through: "PatientSymptomSymptom", // Junction table
+  as: "symptomDetails",
+  foreignKey: "patientSymptomId", // Correct foreign key
+});
+
+Symptom.belongsToMany(PatientSymptom, {
+  through: "PatientSymptomSymptom",
+  as: "patientSymptoms",
+  foreignKey: "symptomId", // Correct foreign key
+});
+
+
 };
 
 export default defineAssociations;

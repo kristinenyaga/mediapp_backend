@@ -9,6 +9,8 @@ import dotenv from 'dotenv'
 import EmergencyContact from '../models/EmergencyContact.js';
 import MedicalInformation from '../models/MedicalInformation.js';
 import Appointment from '../models/Appointment.js';
+import Diagnosis from '../models/Diagnosis.js';
+import PatientSymptom from '../models/PatientSymptoms.js';
 dotenv.config()
 const JWT_SECRET = process.env.JWT_SECRET
 
@@ -69,21 +71,38 @@ export const refreshToken = async (req, res) => {
 
 export const generateOtp = async (req, res) => {
   try {
-    const { email,userType } = req.body
+    const { email, userType } = req.body
+    console.log(userType)
     
     let user;
     if (userType === 'patient') {
       user = await Patient.findOne({ where: { email } })
+      if (!user) {
+        return res
+          .status(404)
+          .json({ message: "Patient email not found." });
+      }
     }
     else if (userType === 'doctor') {
-      user = await Doctor.findOne({where:{email}})
+      user = await Doctor.findOne({ where: { email } })
+      if (!user) {
+        return res
+          .status(404)
+          .json({ message: "Doctor email not found." });
+      }
     }
-    else {
-      user = Admin.findOne({ where: { email } });
+    else if (userType === "admin") {
+      user = await Admin.findOne({ where: { email } });
+      if (!user) {
+        return res.status(404).json({ message: "Admin email not found." });
+      }
     }
 
     if (!user) {
       return res.status(404).json({ message: "User not found." })
+    }
+    else {
+      
     }
 
     req.app.locals.OTP = null;
@@ -160,7 +179,7 @@ export const login = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password.toString(), patient.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Password does not match: Try Again' });
     }
 
     const { accessToken, refreshToken } = generateToken(patient.id, patient.username, patient.email);
@@ -200,6 +219,8 @@ export const login = async (req, res) => {
       accessToken,
       refreshToken,
       patient: { id: patient.id, username: patient.username, email: patient.email },
+      email: patient.email,
+      username:patient.username
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -269,7 +290,7 @@ export const resendOTP = async (req, res) => {
     console.log('Resent OTP:', otp);
     await transporter.sendMail({
       from: process.env.EMAIL,
-      to: patient.email,
+      to: email,
       subject: "Your Resent OTP for Login",
       html: `
         <html>
@@ -415,9 +436,23 @@ export const getPatient = async (req, res) => {
         {
           model: Appointment,
           as: "appointments",
+          include: [
+            {
+              model: Doctor,
+              as: "doctor",
+            },
+            {
+              model: Diagnosis,
+              as: "diagnosis",
+            },
+            {
+              model:PatientSymptom,
+              as:'patientSymptom'
+            }
+          ],
         },
       ],
-      attributes:{exclude:['password','createdAt','updatedAt']}
+      attributes: { exclude: ["password", "createdAt", "updatedAt"] },
     });
 
     // Check if the patient exists
