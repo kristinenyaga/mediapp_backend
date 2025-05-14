@@ -44,7 +44,6 @@ export const handleAppointmentNotification = async (appointment, type,emailTitle
       appointment_id: appointment.id,
     });
 
-    console.log(notification)
 
     const emailSent = await sendEmail(
       notification.recipient_email,

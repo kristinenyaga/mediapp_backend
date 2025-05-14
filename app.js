@@ -13,23 +13,25 @@ import notificationRoutes from './routes/notification.js'
 import adminRoutes from './routes/admin.js'
 import feedbackRoutes from './routes/feedback.js'
 import diagnosisRoutes from './routes/diagnosis.js'
+import "./jobs/appointmentJobs.js"; // Start cron jobs
 
 dotenv.config();
 
 const app = express();
 
 // Middleware
-app.use(cors({
-  origin: 'http://localhost:3000', // Frontend URL
-  credentials: true, // Allow cookies to be sent
-}));
+// app.use(cors({
+//   origin: 'http://localhost:3000', // Frontend URL
+//   credentials: true, // Allow cookies to be sent
+// }));
 
-// app.use(
-//   cors({
-//     origin: "https://medicare-neon-iota.vercel.app", // Frontend URL
-//     credentials: true, // Allow cookies to be sent
-//   })
-// );
+app.use(
+  cors({
+    origin: "https://medicare-neon-iota.vercel.app", // Frontend URL
+    credentials: true, // Allow cookies to be sent
+  })
+);
+
 
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('tiny'));
@@ -47,7 +49,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes)
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/diagnosis", diagnosisRoutes);
-
+app.use("/uploads", express.static("uploads"));
 
 
 app.get('/test-cookies', (req, res) => {

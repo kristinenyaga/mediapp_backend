@@ -196,8 +196,31 @@ export const profile = async (req, res) => {
 };
 
 const generatePassword = () => {
-  return Math.random().toString(36).slice(-8)
-}
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const allChars = uppercase + lowercase + numbers;
+
+  let password = "";
+
+  // Ensure at least one uppercase letter
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+
+  // Ensure at least one number
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+
+  // Fill the remaining 4 characters randomly
+  for (let i = 0; i < 4; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+
+  // Shuffle the password to avoid predictable patterns
+  return password
+    .split("")
+    .sort(() => 0.5 - Math.random())
+    .join("");
+};
+
 
 export const addDoctor = async (req, res) => {
   try {
@@ -217,7 +240,9 @@ export const addDoctor = async (req, res) => {
           const hashedPassword = await bcrypt.hash(password, 10);
 
           await Doctor.create({
-            username: doctor.username,
+            firstName: doctor.firstName,
+            lastName:doctor.lastName,
+            username: `${doctor.firstName} ${doctor.lastName}`,
             email: doctor.email,
             phone: doctor.phone,
             specialization: doctor.specialization,
@@ -231,7 +256,7 @@ export const addDoctor = async (req, res) => {
             from: process.env.EMAIL_USER,
             to: doctor.email,
             subject: "Your Doctor Account Details",
-            text: `Hello ${doctor.username},\n\nYour account has been created.\nLogin details:\nEmail: ${doctor.email}\nPassword: ${password}\n\nPlease log in and change your password immediately.`,
+            text: `Hello ${doctor.firstName} ${doctor.firstName},\n\nYour account has been created.\nLogin details:\nEmail: ${doctor.email}\nPassword: ${password}\n\nPlease log in and change your password`,
           });
         } catch (error) {
           if (error.name === "SequelizeUniqueConstraintError") {

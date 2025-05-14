@@ -14,12 +14,13 @@ export const submitSymptoms = async (req, res) => {
     });
 
     // Predict diagnosis
-    const predictedDiagnosis = await predictDiagnosis(symptoms);
+    const { predicted_disease, confidence } = await predictDiagnosis(symptoms);
 
     // Store prediction in the Diagnosis model
     const diagnosis = await Diagnosis.create({
       appointmentId,
-      predictedDiagnosis,
+      predictedDiagnosis: predicted_disease,
+      confidence
     });
 
     res.status(200).json({
@@ -48,17 +49,19 @@ export const updateSymptoms = async (req, res) => {
       additionalInfo,
     });
 
-    const predictedDiagnosis = await predictDiagnosis(symptoms);
+    const { predicted_disease, confidence } = await predictDiagnosis(symptoms);
+    console.log(confidence)
     let diagnosis = await Diagnosis.findOne({ where: { appointmentId } });
 
     if (diagnosis) {
-      await diagnosis.update({ predictedDiagnosis });
+      await diagnosis.update({ predictedDiagnosis:predicted_disease,confidence });
       
     }
     else {
       await Diagnosis.create({
         appointmentId,
-        predictedDiagnosis,
+        predictedDiagnosis: predicted_disease,
+        confidence
       });
     }
     
@@ -87,10 +90,6 @@ const predictDiagnosis = async (symptoms) => {
   });
   const symptom_names = allSymptoms.map((symptom) => symptom.name);
 
-  console.log('symptom_names',symptom_names)
-  console.log("symptom_vector",symptomVector);
-
-  
 
   const modelResponse = await axios.post("http://127.0.0.1:8080/predict", {
     symptoms: symptomVector,
@@ -98,9 +97,13 @@ const predictDiagnosis = async (symptoms) => {
   });
 
   
-  const { predicted_disease, probabilities } = modelResponse.data;
+  const { predicted_disease, probabilities, confidence } = modelResponse.data;
 
-  return predicted_disease
+const numericConfidence = parseFloat(confidence.replace("%", ""));
+
+
+  return { predicted_disease, confidence:numericConfidence }
+  
   
 }
 

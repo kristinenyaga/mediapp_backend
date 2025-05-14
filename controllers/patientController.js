@@ -313,7 +313,7 @@ export const resendOTP = async (req, res) => {
 
 // Signup
 export const signUp = async (req, res) => {
-  const { username, email, password, phone,dob,gender } = req.body;
+  const { firstName,lastName,email, password, phone,dob,gender } = req.body;
 
   try {
     // Check if the email is already in use
@@ -327,12 +327,14 @@ export const signUp = async (req, res) => {
 
     // Create a new patient record
     const newPatient = await Patient.create({
-      username,
+      username:`${firstName} ${lastName}`,
       email,
       password: hashedPassword,
       phone,
       dob,
-      gender
+      gender,
+      firstName,
+      lastName
     });
 
     res.status(201).json({ message: 'Signup successful', patient: newPatient });

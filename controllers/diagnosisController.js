@@ -114,9 +114,19 @@ export const getAllDiagnoses = async (req, res) => {
         },
       ],
     });
+    // console.log(diagnoses)
+const uniqueDiagnoses = [];
+const seenAppointments = new Set();
+
+for (const diag of diagnoses) {
+  if (!seenAppointments.has(diag.appointmentId)) {
+    seenAppointments.add(diag.appointmentId);
+    uniqueDiagnoses.push(diag);
+  }
+}
 
     // Transform response: Convert symptom IDs to names
-    const diagnosesWithSymptoms = diagnoses.map((diagnosis) => {
+    const diagnosesWithSymptoms = uniqueDiagnoses.map((diagnosis) => {
       if (diagnosis.appointment && diagnosis.appointment.patientSymptom) {
         const symptomIds = diagnosis.appointment.patientSymptom.symptoms || [];
 

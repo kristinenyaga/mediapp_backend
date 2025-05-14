@@ -11,6 +11,14 @@ const Doctor = sequelize.define("Doctor", {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  firstName: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  lastName: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
   email: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -45,8 +53,8 @@ const Doctor = sequelize.define("Doctor", {
   },
   isFirstLogin: {
     type: DataTypes.BOOLEAN,
-    
   },
+  profileImage: { type: DataTypes.STRING, allowNull: true },
 });
 
 export default Doctor;

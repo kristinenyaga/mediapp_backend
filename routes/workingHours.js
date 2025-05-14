@@ -1,8 +1,10 @@
 import express from 'express'
-import {  deleteWorkingHours, getDoctorWorkingHours, saveWorkingHours, updateWorkingHours } from '../controllers/workingHoursController.js'
+import {  addWorkingHours, deleteWorkingHours, getDoctorWorkingHours, saveWorkingHours, updateWorkingHours } from '../controllers/workingHoursController.js'
 import { Auth } from '../middleware/auth.js'
 
 const router = express.Router()
+
+router.post("/:id",addWorkingHours );
 
 router.get('/:doctorId', getDoctorWorkingHours)
 router.post('/',Auth, saveWorkingHours)

@@ -247,7 +247,7 @@ export const calculateAvailableSlots = async (req, res) => {
         status: { [Op.ne]: "cancelled" },
       },
     };
-    console.log("appointmentsQuery", appointmentsQuery);
+    // console.log("appointmentsQuery", appointmentsQuery);
     
     if (doctorId) {
       appointmentsQuery.where.doctorId = doctorId;
@@ -255,7 +255,7 @@ export const calculateAvailableSlots = async (req, res) => {
 
     const existingAppointments = await Appointment.findAll(appointmentsQuery);
 
-    console.log("existingAppointments", existingAppointments);
+    // console.log("existingAppointments", existingAppointments);
 
     // Helper function to check if a time slot overlaps with existing appointments
     const isSlotAvailable = (slotStart, slotEnd) => {
@@ -472,7 +472,18 @@ export const updateAppointment = async (req, res) => {
     });
 
     const updatedAppointment = await Appointment.findByPk(id)
-    return res.status(200).json(updatedAppointment)
+            const getTimeslot = (startTime) => {
+              console.log("start time", startTime);
+              const hour = parseInt(startTime.split(":")[0], 10);
+              return hour < 12 ? "morning" : "afternoon";
+            };
+            // Add timeslot field to the response
+            const appointmentData = {
+              ...updatedAppointment.toJSON(),
+              timeSlot: getTimeslot(updatedAppointment.startTime),
+            };
+
+    return res.status(200).json(appointmentData)
 
   } catch (error) {
     return res

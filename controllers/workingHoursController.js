@@ -34,6 +34,41 @@ export const saveWorkingHours = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+export const addWorkingHours = async (req, res) => {
+  try {
+    const doctorId = req.params.id;
+    const workingHours = req.body;
+
+    const doctor = await Doctor.findByPk(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    console.log(workingHours);
+    const upsertPromises = workingHours.map(
+      async ({ dayOfWeek, startTime, endTime }) => {
+        await WorkingHours.upsert({
+          doctorId,
+          dayOfWeek,
+          startTime,
+          endTime,
+        });
+      }
+    );
+
+    await Promise.all(upsertPromises);
+
+    const updatedWorkingHours = await WorkingHours.findAll({
+      where: { doctorId },
+      attributes: ["dayOfWeek", "startTime", "endTime"],
+    });
+
+    return res.status(200).json(updatedWorkingHours);
+  } catch (error) {
+    console.error("Error saving working hours:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 export const getDoctorWorkingHours = async (req, res) => {
   try {

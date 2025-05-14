@@ -7,6 +7,13 @@ import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 import WorkingHours from '../models/WorkingHours.js';
 import Appointment from '../models/Appointment.js';
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
+// Define __dirname manually
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 dotenv.config()
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
@@ -80,7 +87,7 @@ export const ResetPassword = async(req,res) => {
     await user.update({ password: hashedPassword })
 
     if (user.isFirstLogin === true) {
-      await nvmuser.update({isFirstLogin:'false'})
+      await user.update({isFirstLogin:'false'})
     }
     
 
@@ -398,3 +405,48 @@ export const profile = async (req, res) => {
   }
 
 }
+
+
+
+export const uploadProfileImage = async (req, res) => {
+  try {
+    const id = req.user.id;
+    const doctor = await Doctor.findByPk(id);
+
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Please upload an image" });
+    }
+
+    // Delete old image if exists
+    if (doctor.profileImage) {
+      const oldImagePath = path.join(
+        __dirname,
+        "..",
+        "uploads",
+        doctor.profileImage
+      );
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath); // Delete old image file
+      }
+    }
+
+    // Save new image path
+    doctor.profileImage = req.file.filename;
+    await doctor.save();
+
+    res.status(200).json({
+      message: "Profile image uploaded successfully",
+      imageUrl: `${req.protocol}://${req.get("host")}/uploads/${
+        req.file.filename
+      }`,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error uploading profile image", error: error.message });
+  }
+};

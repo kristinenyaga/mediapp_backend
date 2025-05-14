@@ -28,6 +28,10 @@ const Diagnosis = sequelize.define("Diagnosis", {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  confidence: {
+    type: DataTypes.FLOAT,
+    allowNull:true
+  }
 });
 
 export default Diagnosis;
